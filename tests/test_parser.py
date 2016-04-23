@@ -1,7 +1,7 @@
 import unittest
 from codecs import open
 
-from parser import Parser
+from d_parser import Parser
 
 
 class ParserTestCase(unittest.TestCase):
