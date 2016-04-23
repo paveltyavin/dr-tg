@@ -10,4 +10,4 @@ class ParserTestCase(unittest.TestCase):
         with open('./pages/6.htm', encoding='cp1251') as f:
             parser.html = f.read()
         ko_list = parser.get_ko_list()
-        self.assertEqual([], ko_list)
+        self.assertEqual(['1', '1+'], ko_list)
