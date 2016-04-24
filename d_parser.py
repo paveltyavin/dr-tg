@@ -26,6 +26,8 @@ class Parser(object):
         """
         div_list = self.g.doc.select('//div[@class="zad"]')
         div_html = next((div.html() for div in div_list if '<strong>Коды сложности</strong>' in div.html()), None)
+        if div_html is None:
+            return []
         ko_part = div_html.split('<strong>Коды сложности</strong><br> ')[1]
         ko_part = ko_part.replace('null', 'N').replace('<br></div>', '').replace('\n', '').replace('\r', '')
         ko_part = self.red_span_re.sub('V', ko_part)
