@@ -1,10 +1,12 @@
 from grab.base import Grab
 import re
 
+
 class Parser(object):
+    red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
+
     def __init__(self):
         self.g = Grab()
-        self.red_span_re = re.compile(r'<span style="color:red">([123]\+?|N)</span>')
 
     def get_html(self):
         """
@@ -13,26 +15,25 @@ class Parser(object):
         """
         pass
 
-    def get_ko_list(self):
+    def get_sector_list(self):
         """
         Возвращает списки КО, в виде словаря, в котором ключ - название группы КО, значение - список КО.
         Пример:
-        {'основные коды': ['1+', '1', '3'], 'бонусные коды': ['2', '3', '1']}
+        [{'name': 'Первый сектор', 'ko': ['1+', '1', '3']},{'name': 'Второй сектор','ko' = ['1', '2']}]
+
+        В обычном уровне (без секторов)
+        [{'name': 'Основные коды','ko': ['1+', '1', '3']}]
         """
         div_list = self.g.doc.select('//div[@class="zad"]')
-        for i in div_list:
-            if '<strong>Коды сложности</strong>' in i.html():
-                div_html = i.html()
+        div_html = next((div.html() for div in div_list if '<strong>Коды сложности</strong>' in div.html()), None)
         ko_part = div_html.split('<strong>Коды сложности</strong><br> ')[1]
         ko_part = ko_part.replace('null', 'N').replace('<br></div>', '').replace('\n', '').replace('\r', '')
         ko_part = self.red_span_re.sub('V', ko_part)
-        code_lists = ko_part.split('<br>')
-        code_dict = {}
-        for i in code_lists:
-            ko_dict = i.split(': ')
-            key = ko_dict[0]
-            value = ko_dict[1].split(', ')
-            item = [key, value]
-            code_dict.update([item])
-        print(code_dict)
-        return code_dict
+        result = []
+        for sector in ko_part.split('<br>'):
+            sector_name, sector_code_str = sector.split(': ')
+            result.append({
+                'name': sector_name,
+                'ko_list': sector_code_str.split(', '),
+            })
+        return result
