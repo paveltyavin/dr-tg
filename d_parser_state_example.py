@@ -4,7 +4,13 @@ example_state = {
     },
     'level': {
         'codes_left': 10,  # Осталось кодов
-        'spoiler_taken': False,
+        'spoiler': {
+            'taken': False,
+            'text': '',
+        },
+        'tip_list': [
+            'Подсказка1',
+        ],
         'sector_list': [
             {
                 'name': 'Основные коды',

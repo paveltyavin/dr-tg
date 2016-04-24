@@ -18,21 +18,16 @@ class ParserTestCase(unittest.TestCase):
 
     def test_get_sector_list_multiple(self):
         """Несколько секторов"""
-        self.set_html('pages/10.html')
+        self.set_html('pages/10/1.html')
         sector_list = self.parser.get_sector_list()
         self.assertListEqual([
             {'name': 'бонусные коды', 'code_list': [{'ko': 'N', 'taken': False}]},
-            {'name': 'основные коды', 'code_list': [
-                {'ko': 'N', 'taken': False},
-                {'ko': 'N', 'taken': False},
-                {'ko': 'N', 'taken': False},
-                {'ko': 'N', 'taken': False},
-            ]},
+            {'name': 'основные коды', 'code_list': [{'ko': 'N', 'taken': False}] * 4},
         ], sector_list)
 
     def test_get_sector_list_one(self):
         """Один сектор, многие коды взяты"""
-        self.set_html('pages/18.html')
+        self.set_html('pages/18/1.html')
         sector_list = self.parser.get_sector_list()
         self.assertListEqual([
             {'name': 'основные коды', 'code_list': [
@@ -53,8 +48,18 @@ class ParserTestCase(unittest.TestCase):
             ]},
         ], sector_list)
 
+    def test_get_sector_change_state(self):
+        """Взятие кода по восьмой метке."""
+        self.set_html('pages/19/1.html')
+        sector_list = self.parser.get_sector_list()
+        self.assertEqual(sector_list[0]['code_list'][7]['taken'], False)
+
+        self.set_html('pages/19/2.html')
+        sector_list = self.parser.get_sector_list()
+        self.assertEqual(sector_list[0]['code_list'][7]['taken'], True)
+
     def test_get_tips_list(self):
-        self.set_html('pages/tip1.html')
+        self.set_html('pages/18/1.html')
 
         tips_list = self.parser.get_tips_list()
         self.assertListEqual(['Ответ на спойлер: пустырь'], tips_list)
