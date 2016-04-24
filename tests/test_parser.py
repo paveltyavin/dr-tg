@@ -35,4 +35,4 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/stub/18tip1.html')
 
         tips_list = self.parser.get_tips_list()
-        self.assertListEqual('Ответ на спойлер: пустырь', tips_list)
+        self.assertListEqual(['Ответ на спойлер: пустырь'], tips_list)

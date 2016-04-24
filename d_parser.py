@@ -72,5 +72,5 @@ class Parser(object):
         div_html = next((div for div in div_list if 'Подсказка l:' in div.html()), None)
         if div_html is None:
             return []
-        tip_text = div_html.getnext(self).text()
-        return tip_text
+        tip_text = div_html.node().getnext().text_content()
+        return [tip_text]
