@@ -16,7 +16,7 @@ class ParserTestCase(unittest.TestCase):
             self.parser.g.setup_document(html_bytes)
 
     def test_get_sector_list(self):
-        self.set_html('./pages/6.htm')
+        self.set_html('pages/6.htm')
 
         sector_list = self.parser.get_sector_list()
         self.assertListEqual([{
