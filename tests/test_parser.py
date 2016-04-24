@@ -16,50 +16,51 @@ class ParserTestCase(unittest.TestCase):
             html_bytes = bytes(html, encoding='cp1251')
             self.parser.g.setup_document(html_bytes)
 
-    def test_get_sector_list_multiple(self):
+    def test_parse_level_multiple(self):
         """Несколько секторов"""
         self.set_html('pages/10/1.html')
-        sector_list = self.parser.get_sector_list()
-        self.assertListEqual([
-            {'name': 'бонусные коды', 'code_list': [{'ko': 'N', 'taken': False}]},
-            {'name': 'основные коды', 'code_list': [{'ko': 'N', 'taken': False}] * 4},
-        ], sector_list)
+        self.parser.parse_level()
 
-    def test_get_sector_list_one(self):
+        self.assertEqual(self.parser.table_sector.count(), 2)
+
+        sector_1 = self.parser.table_sector.find_one()
+        self.assertEqual(sector_1['name'], 'бонусные коды')
+        code = self.parser.table_code.find_one(metka=1, sector_id=sector_1['id'])
+        self.assertEqual(code['ko'], 'N')
+
+    def test_parse_level_one(self):
         """Один сектор, многие коды взяты"""
         self.set_html('pages/18/1.html')
-        sector_list = self.parser.get_sector_list()
-        self.assertListEqual([
-            {'name': 'основные коды', 'code_list': [
-                {'ko': '3', 'taken': True},
-                {'ko': '2', 'taken': False},
-                {'ko': '3', 'taken': True},
-                {'ko': '2', 'taken': False},
-                {'ko': '2', 'taken': True},
-                {'ko': '1', 'taken': False},
-                {'ko': '1', 'taken': True},
-                {'ko': '2', 'taken': False},
-                {'ko': '1', 'taken': True},
-                {'ko': '1+', 'taken': False},
-                {'ko': '1+', 'taken': False},
-                {'ko': '1', 'taken': False},
-                {'ko': '1+', 'taken': False},
-                {'ko': '1', 'taken': True},
-            ]},
-        ], sector_list)
+        self.parser.parse_level()
 
-    def test_get_sector_change_state(self):
+        self.assertEqual(self.parser.table_sector.count(), 1)
+        self.assertEqual(self.parser.table_code.count(), 14)
+
+        code_1 = self.parser.table_code.find_one(metka=1)
+        self.assertEqual(code_1['ko'], '3')
+        self.assertEqual(code_1['taken'], True)
+
+        code_2 = self.parser.table_code.find_one(metka=2)
+        self.assertEqual(code_2['ko'], '2')
+        self.assertEqual(code_2['taken'], False)
+
+    def test_parse_sector_change_state(self):
         """Взятие кода по восьмой метке."""
         self.set_html('pages/19/1.html')
-        sector_list = self.parser.get_sector_list()
-        self.assertEqual(sector_list[0]['code_list'][7]['taken'], False)
+        self.parser.parse_level()
+        code = self.parser.table_code.find_one(metka=8)
+        self.assertEqual(code['taken'], False)
 
         self.set_html('pages/19/2.html')
-        sector_list = self.parser.get_sector_list()
-        self.assertEqual(sector_list[0]['code_list'][7]['taken'], True)
+        self.parser.parse_level()
+        code = self.parser.table_code.find_one(metka=8)
+        self.assertEqual(code['taken'], True)
 
-    def test_get_tips_list(self):
+    def test_parse_tip(self):
         self.set_html('pages/18/1.html')
+        self.parser.parse_tip()
+        self.parser.parse_tip()
 
-        tips_list = self.parser.get_tips_list()
-        self.assertListEqual(['Ответ на спойлер: пустырь'], tips_list)
+        self.assertEqual(self.parser.table_tip.count(), 1)
+        tip = self.parser.table_tip.find_one()
+        self.assertEqual(tip['text'], 'Ответ на спойлер: пустырь')

@@ -1,5 +1,6 @@
 from urllib.parse import urlencode
 
+import dataset
 from grab.base import Grab
 import re
 
@@ -18,10 +19,17 @@ drive_url = 'http://classic.dzzzr.ru/moscow/go/?{}'.format(urlencode({
 
 class Parser(object):
     red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
-    state = {}  # Состояние дозорного движка. Пример состояния - в файле d_parser_state_example.py
+    current_level = None
+    current_game = None
 
     def __init__(self):
         self.g = Grab()
+        self.db = dataset.connect('sqlite:///:memory:')
+        # self.db = dataset.connect('sqlite:///mydatabase.db')  # Можно использовать файл базы
+
+        self.table_code = self.db['code']
+        self.table_sector = self.db['sector']
+        self.table_tip = self.db['tip']
 
     def auth(self, login='', password=''):
         """Авторизация на сайте дозора"""
@@ -33,54 +41,51 @@ class Parser(object):
     def fetch(self):
         """Идет на сайт дозора, парсит страницу и обновляет текущее состояние"""
         self.g.go(drive_url)
-        self.state = self.get_state()
+        self.parse_level()
 
-    def get_state(self):
-        return {
-            'game': self.get_game(),
-            'level': self.get_level(),
-        }
+    def parse_level(self):
+        """Парсит текст задания. Возвращает объект обновления"""
+        result = False
+        div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        sector_list_str = div.html()
+        level_number_str = div.node().getprevious().text
+        level_number_str = level_number_str.replace('Задание', '')
+        current_level = int(level_number_str.strip())
+        if self.current_level != current_level:
+            self.table_sector.delete()
+            self.table_code.delete()
+            result = True
 
-    def get_level(self):
-        return {
-            'codes_left': 0,
-            'sector_list': self.get_sector_list(),
-        }
-
-    def get_game(self):
-        return {
-            'current_level': 0,
-        }
-
-    def get_sector_list(self):
-        div_list = self.g.doc.select('//div[@class="zad"]')
-        div_html = next((div.html() for div in div_list if '<strong>Коды сложности</strong><br> ' in div.html()), None)
-        if div_html is None:
-            return []
-        ko_part = div_html.split('<strong>Коды сложности</strong><br> ')[1]
-        ko_part = ko_part.split('<br></div>')[0]
-        ko_part = ko_part.replace('null', 'N')
-        result = []
-        for sector in ko_part.split('<br> '):
+        sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
+        sector_list_str = sector_list_str.split('<br></div>')[0]
+        sector_list_str = sector_list_str.replace('null', 'N')
+        for sector_id, sector in enumerate(sector_list_str.split('<br> ')):
             sector_name, sector_code_str = sector.split(': ')
-            code_list = []
-            for item in sector_code_str.split(', '):
+            for index, item in enumerate(sector_code_str.split(', ')):
                 taken = bool(self.red_span_re.match(item))
                 ko = self.red_span_re.findall(item)[0] if taken else item
-                code_list.append({
+                self.table_code.upsert({
                     'ko': ko,
                     'taken': taken,
-                })
-            result.append({
+                    'metka': index + 1,
+                    'sector_id': sector_id,
+                }, ['sector_id', 'metka'])
+            self.table_sector.upsert({
                 'name': sector_name,
-                'code_list': code_list,
-            })
+                'id': sector_id,
+            }, ['id'])
         return result
 
-    def get_tips_list(self):
+    def parse_tip(self):
+        """Парсит текст подсказок. Возвращает объект новой подсказки"""
+        self.table_tip.delete()
+
         div_list = self.g.doc.select('//div[@class="title"]')
         div = next((div for div in div_list if 'Подсказка l:' in div.html()), None)
         if div is None:
-            return []
+            return
         tip_text = div.node().getnext().text_content()
-        return [tip_text]
+        self.table_tip.upsert({
+            'text': tip_text,
+            'index': 1,
+        }, ['index'])
