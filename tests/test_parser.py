@@ -10,7 +10,8 @@ class ParserTestCase(unittest.TestCase):
         self.parser = Parser()
 
     def set_html(self, filename):
-        with codecs.open(os.path.join(os.path.curdir, filename), encoding='cp1251') as f:
+        filepath = os.path.join(os.path.dirname(__file__), filename)
+        with codecs.open(filepath, encoding='cp1251') as f:
             html = f.read()
             html_bytes = bytes(html, encoding='cp1251')
             self.parser.g.setup_document(html_bytes)
