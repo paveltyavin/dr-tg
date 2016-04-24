@@ -66,3 +66,11 @@ class Parser(object):
                 'ko_list': sector_code_str.split(', '),
             })
         return result
+
+    def get_tips_list(self):
+        div_list = self.g.doc.select('//div[@class="title"]')
+        div_html = next((div for div in div_list if 'Подсказка l:' in div.html()), None)
+        if div_html is None:
+            return []
+        tip_text = div_html.getnext(self).text()
+        return tip_text
