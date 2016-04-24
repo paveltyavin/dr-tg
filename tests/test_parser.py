@@ -17,10 +17,16 @@ class ParserTestCase(unittest.TestCase):
             self.parser.g.setup_document(html_bytes)
 
     def test_get_sector_list(self):
-        self.set_html('pages/6.htm')
+        self.set_html('pages/1.html')
 
         sector_list = self.parser.get_sector_list()
         self.assertListEqual([{
             'name': 'основные коды',
-            'ko_list': ['1', '1+'],
+            'code_list': [{
+                'ko': '1',
+                'taken': False
+            }, {
+                'ko': '1+',
+                'taken': False
+            }],
         }], sector_list)

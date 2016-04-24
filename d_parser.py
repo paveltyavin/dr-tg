@@ -8,10 +8,9 @@ class Parser(object):
     def __init__(self):
         self.g = Grab()
 
-    def get_html(self):
+    def fetch(self):
         """
-        Идет на сайт дозора, парсит страницу и записывает ее в аттрибут html
-        TODO: Здесь должна быть работа с объектом self.g
+        Идет на сайт дозора, парсит страницу, и обновляет текущее состояние
         """
         pass
 
@@ -19,10 +18,38 @@ class Parser(object):
         """
         Возвращает списки КО, в виде словаря, в котором ключ - название группы КО, значение - список КО.
         Пример:
-        [{'name': 'Первый сектор', 'ko': ['1+', '1', '3']},{'name': 'Второй сектор','ko' = ['1', '2']}]
-
-        В обычном уровне (без секторов)
-        [{'name': 'Основные коды','ko': ['1+', '1', '3']}]
+        [
+            {
+                'name': 'Основные коды',
+                'code_list': [
+                    {
+                        'ko':'1+',
+                        'taken': False,
+                    },
+                    {
+                        'ko':'1',
+                        'taken': True,
+                    },
+                    {
+                        'ko':'3',
+                        'taken': True,
+                    }
+                ]
+            },
+            {
+                'name': 'Бонусные коды',
+                'code_list': [
+                    {
+                        'ko':'2+',
+                        'taken': False,
+                    },
+                    {
+                        'ko':'4',
+                        'taken': False,
+                    }
+                ]
+            }
+        ]
         """
         div_list = self.g.doc.select('//div[@class="zad"]')
         div_html = next((div.html() for div in div_list if '<strong>Коды сложности</strong>' in div.html()), None)
