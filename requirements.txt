@@ -1,4 +1,5 @@
 dataset==0.6.4
 grab==0.6.30
 Pillow==3.2.0
+psycopg2==2.6.1
 telepot==7.1

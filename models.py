@@ -1,11 +1,16 @@
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urljoin
 
 import dataset
 from grab.base import Grab
 import re
+import settings
 
-start_url = 'http://classic.dzzzr.ru/moscow/'
-drive_url = 'http://classic.dzzzr.ru/moscow/go/?{}'.format(urlencode({
+# host = 'http://127.0.0.1:8010'
+from decorators import throttle
+
+host = 'http://classic.dzzzr.ru/moscow/'
+start_url = urljoin(host, 'moscow/')
+drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'nostat': 'on',
     'notext': '',
     'notags': '',
@@ -14,7 +19,7 @@ drive_url = 'http://classic.dzzzr.ru/moscow/go/?{}'.format(urlencode({
     'legend': '',
     'bonus': 'on',
     'kladMap': '',
-}))
+})))
 
 
 class Parser(object):
@@ -26,27 +31,55 @@ class Parser(object):
         self.g = Grab()
         self.db = dataset.connect('sqlite:///:memory:')
         # self.db = dataset.connect('sqlite:///mydatabase.db')  # Можно использовать файл базы
+        self.db = dataset.connect(settings.DATASET)
 
         self.table_code = self.db['code']
         self.table_sector = self.db['sector']
         self.table_tip = self.db['tip']
+        self.table_cookies = self.db['cookies']
+
+        for cookie_dict in self.db['cookies']:
+            del cookie_dict['id']
+            try:
+                self.g.cookies.set(**cookie_dict)
+            except ValueError:
+                pass
 
     def auth(self, login='', password=''):
         """Авторизация на сайте дозора"""
+        self.table_cookies.delete()
+
         self.g.go(start_url)
         self.g.doc.set_input('login', login)
         self.g.doc.set_input('password', password)
         self.g.doc.submit()
+        cookie_list = self.g.cookies.get_dict()
 
-    def fetch(self):
-        """Идет на сайт дозора, парсит страницу и обновляет текущее состояние"""
+        for cookie_dict in cookie_list:
+            self.table_cookies.insert(cookie_dict)
+
+    @throttle(seconds=2)
+    def take_code(self, code):
+        """Пробивка кода. Возвращает сообщение движка"""
+        code = code.lower()
+        code = code.replace('д', 'd')
+        code = code.replace('р', 'r')
+
         self.g.go(drive_url)
-        self.parse_level()
-        self.parse_tip()
+        self.g.doc.set_input('cod', code)
+        self.g.doc.submit()
+        message = self.g.doc.select('//div[@class="sysmsg"]//b').text()
+        return message
 
-    def parse_level(self):
+    def parse(self):
+        result = {}
+        result.update(self._parse_level())
+        result.update(self._parse_tip())
+        return result
+
+    def _parse_level(self):
         """
-        Парсит текст задания. Возвращает словарь с инфой об обновлении.
+        Парсит страницу дозорного движка. Возвращает словарь с инфой об обновлении.
         Подробнее, что такое инфа обновления - в комментариях ниже
         """
         result = {
@@ -97,12 +130,12 @@ class Parser(object):
             }, ['id'])
         return result
 
-    def parse_tip(self):
+    def _parse_tip(self):
         """
         Парсит текст подсказок. Возвращает объект обновления
         """
         result = {
-            'new_tip': False,  # Есть ли новая подсказка?
+            'tip_list': [],  # Новые подсказки.
         }
         self.table_tip.delete()
 
@@ -118,8 +151,11 @@ class Parser(object):
             'index': 1,  # номер подсказки
         }, ['index'])
         if old_tip is None:
-            result.update({
+            result['tip_list'].append({
                 'text': tip_text,
                 'index': 1,
             })
         return result
+
+
+freq_dict = {x: "{:.3f}".format(433.075 + x * 0.025) for x in range(1, 70)}
