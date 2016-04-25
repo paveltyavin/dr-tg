@@ -110,7 +110,8 @@ class Parser(object):
         div = next((div for div in div_list if 'Подсказка l:' in div.html()), None)
         if div is None:
             return result
-        tip_text = div.node().getnext().text_content()
+        tip_node = div.node().getnext()
+        tip_text = tip_node.text_content()
         old_tip = self.table_tip.find_one(index=1)
         self.table_tip.upsert({
             'text': tip_text,
