@@ -57,7 +57,7 @@ class ParserTestCase(unittest.TestCase):
         code = self.parser.table_code.find_one(metka=8)
         self.assertEqual(code['taken'], False)
 
-        self.set_html('pages/19/2.html')
+        self.set_html('pages/19/3.html')
         result = self.parser.parse()
         self.assertEqual(result['new_level'], False)  # Нет нового уровня
         code_list = result['sector_list'][0]['code_list']  # Берем взятые коды из первого (единственного) сектора

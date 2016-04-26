@@ -40,7 +40,7 @@ class ManulaBot(Bot):
                     for code in sector['code_list']:
                         metka_list.append(code['metka'])
                 if metka_list:
-                    message = "{} . Метка: {}".format(message, " или ".join(metka_list))
+                    message = "{} . Метка: {}".format(message, " или ".join(list(map(str, metka_list))))
             self.sendMessage(chat_id, message)
 
     def on_freq(self, chat_id, text):
@@ -73,7 +73,7 @@ class ManulaBot(Bot):
 
     def on_chat_message(self, msg):
         text = msg['text']
-        chat_id = msg.get('chat').get('id')
+        chat_id = msg['chat'].get('id')
 
         # Отвечает не собеседнику, а в определенный чат, если в settings этот чат задан явно.
         if hasattr(settings, 'CHAT_ID'):

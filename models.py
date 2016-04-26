@@ -45,6 +45,10 @@ class Parser(object):
             except ValueError:
                 pass
 
+    def fetch(self):
+        """Загружает страницу движка"""
+        self.g.go(drive_url)
+
     def auth(self, login='', password=''):
         """Авторизация на сайте дозора"""
         self.table_cookies.delete()
