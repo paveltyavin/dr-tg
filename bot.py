@@ -1,8 +1,10 @@
 from telepot import Bot
 import settings
 import re
+import time
 
 from models import Parser, freq_dict
+from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
 LINK_RE = re.compile(r'/link', flags=re.I)
@@ -94,7 +96,27 @@ class ManulaBot(Bot):
         if re.match(r'^/auth', text):
             return self.on_auth(chat_id, text)
 
+    def handle_loop(self):
+        if not hasattr(settings, 'CHANNEL_ID'):
+            return
+        channel_id = settings.CHANNEL_ID
+
+        self.parser.fetch()
+        parse_result = self.parser.parse()
+        if parse_result['new_level']:
+            self.sendMessage(channel_id, 'Новый уровень.')
+        for tip in parse_result['tip_list']:
+            self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))
+
+        if parse_result['new_code']:
+            for sector in self.parser.table_sector.all():
+                sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
+                self.sendMessage(channel_id, sector_text(sector))
+
 
 if __name__ == '__main__':
     bot = ManulaBot(settings.TOKEN)
-    bot.message_loop(run_forever=True)
+    bot.message_loop()
+    while 1:
+        bot.handle_loop()
+        time.sleep(10)

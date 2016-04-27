@@ -24,7 +24,7 @@ class ParserTestCase(unittest.TestCase):
 
     def test_parse_level_multiple(self):
         """Несколько секторов"""
-        self.set_html('pages/10/1.html')
+        self.set_html('pages/2sector.html')
         self.parser.parse()
 
         self.assertEqual(self.parser.table_sector.count(), 2)
@@ -36,7 +36,7 @@ class ParserTestCase(unittest.TestCase):
 
     def test_parse_level_one(self):
         """Один сектор, многие коды взяты"""
-        self.set_html('pages/18/1.html')
+        self.set_html('pages/tip_1.html')
         self.parser.parse()
 
         self.assertEqual(self.parser.table_sector.count(), 1)
@@ -52,12 +52,12 @@ class ParserTestCase(unittest.TestCase):
 
     def test_parse_sector_take_code(self):
         """Взятие кода по восьмой и одиннадцатой метке."""
-        self.set_html('pages/19/1.html')
+        self.set_html('pages/code_1.html')
         self.parser.parse()
         code = self.parser.table_code.find_one(metka=8)
         self.assertEqual(code['taken'], False)
 
-        self.set_html('pages/19/3.html')
+        self.set_html('pages/code_3.html')
         result = self.parser.parse()
         self.assertEqual(result['new_level'], False)  # Нет нового уровня
         code_list = result['sector_list'][0]['code_list']  # Берем взятые коды из первого (единственного) сектора
@@ -70,13 +70,13 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(code['taken'], True)
 
     def test_parse_tip(self):
-        self.set_html('pages/18/1.html')
+        self.set_html('pages/tip_1.html')
         result = self.parser.parse()
         self.assertEqual(len(result['tip_list']), 0)
         self.assertEqual(self.parser.table_tip.count(), 0)  # Подсказок в базе не должно быть
 
         tip_text = 'Ответ на спойлер: пустырь'
-        self.set_html('pages/18/2.html')
+        self.set_html('pages/tip_2.html')
         result = self.parser.parse()
         self.assertEqual(result['tip_list'][0]['text'], tip_text)
 

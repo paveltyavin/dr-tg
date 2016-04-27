@@ -88,6 +88,7 @@ class Parser(object):
         """
         result = {
             'new_level': False,  # Новый уровень?
+            'new_code': False, # Новый пробитый код?
             'sector_list': [],  # Инфо о взятых кодах
         }
         div = self.g.doc.select('//div[@class="zad"][1]')[0]
@@ -106,7 +107,11 @@ class Parser(object):
         sector_list_str = sector_list_str.replace('null', 'N')
         for sector_index, sector_str in enumerate(sector_list_str.split('<br> ')):
             sector_name, sector_code_str = sector_str.split(': ')
-            sector = {'code_list': []}
+            sector = {
+                'id': sector_index + 1,
+                'name': sector_name,
+                'code_list': [],
+            }
             for metka_index, item in enumerate(sector_code_str.split(', ')):
                 taken = bool(self.red_span_re.match(item))
                 ko = self.red_span_re.findall(item)[0] if taken else item
@@ -125,12 +130,13 @@ class Parser(object):
                     self.table_code.insert(filters)
                 elif old_code['taken'] != taken:
                     self.table_code.update(filters, ['sector_id', 'metka'])
+                    result['new_code'] = True
                     sector['code_list'].append(filters)
 
             result['sector_list'].append(sector)
             self.table_sector.upsert({
-                'name': sector_name,
                 'id': sector_index + 1,
+                'name': sector_name,
             }, ['id'])
         return result
 

@@ -91,17 +91,18 @@ class KoImg(object):
             self.draw.text((x, y), '{:2s}'.format(ko), font=self.font, fill=code_color)
 
 
-def code_text(code_list):
+def sector_text(sector):
     """
     Вьюха списка KO в виде текста
     Принимает список кодов в формате [{'ko': '1', 'taken': True}, ...]
     """
+    code_list = sector['code_list']
     l = len(code_list)
     rows = 5 if l <= 10 else 10  # Сколько элементов в колонке.
     cols = 2  # Колонок всегда 2
     pages = l // (rows * cols) + 1  # Кол-во страниц
 
-    result = ""
+    result = "{}\n".format(sector['name'])
     result += "```\n"
 
     for page_index, page in enumerate(range(pages)):  # Номер страницы
