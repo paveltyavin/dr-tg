@@ -5,7 +5,6 @@ from grab.base import Grab
 import re
 import settings
 
-# host = 'http://127.0.0.1:8010'
 from decorators import throttle
 
 host = 'http://classic.dzzzr.ru/moscow/'
@@ -21,16 +20,14 @@ drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'kladMap': '',
 })))
 
+red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
+
 
 class Parser(object):
-    red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
     current_level = None
-    current_game = None
 
     def __init__(self):
         self.g = Grab()
-        self.db = dataset.connect('sqlite:///:memory:')
-        # self.db = dataset.connect('sqlite:///mydatabase.db')  # Можно использовать файл базы
         self.db = dataset.connect(settings.DATASET)
 
         self.table_code = self.db['code']
@@ -88,7 +85,7 @@ class Parser(object):
         """
         result = {
             'new_level': False,  # Новый уровень?
-            'new_code': False, # Новый пробитый код?
+            'new_code': False,  # Новый пробитый код?
             'sector_list': [],  # Инфо о взятых кодах
         }
         div = self.g.doc.select('//div[@class="zad"][1]')[0]
@@ -100,6 +97,7 @@ class Parser(object):
             self.current_level = current_level
             self.table_sector.delete()
             self.table_code.delete()
+            self.table_tip.delete()
             result['new_level'] = True
 
         sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
@@ -113,8 +111,8 @@ class Parser(object):
                 'code_list': [],
             }
             for metka_index, item in enumerate(sector_code_str.split(', ')):
-                taken = bool(self.red_span_re.match(item))
-                ko = self.red_span_re.findall(item)[0] if taken else item
+                taken = bool(red_span_re.match(item))
+                ko = red_span_re.findall(item)[0] if taken else item
 
                 old_code = self.table_code.find_one(**{
                     'sector_id': sector_index + 1,
