@@ -3,7 +3,7 @@ import settings
 import re
 import time
 
-from models import Parser, freq_dict
+from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
@@ -13,10 +13,21 @@ CODE_RE = re.compile(r'\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(
 
 class ManulaBot(Bot):
     freq = 28  # Частота рации
+    type = False  # Режим ввода кодов
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.parser = Parser()
+
+    def on_help(self, chat_id, text):
+        self.sendMessage(chat_id, HELP_TEXT)
+
+    def on_type(self, chat_id, text):
+        if 'on' in text:
+            self.type = True
+        elif 'off' in text:
+            self.type = False
+        self.sendMessage(chat_id, "Режим ввода кодов: {}".format("Включен" if self.type else "Выключен"))
 
     def on_link(self, chat_id, text):
         self.sendMessage(chat_id, 'Ссылка')
@@ -27,6 +38,8 @@ class ManulaBot(Bot):
             self.sendLocation(chat_id, *cord_list)
 
     def on_code(self, chat_id, text):
+        if not self.type:
+            return
         code_list = re.findall(CODE_RE, text)
 
         for code in code_list:
@@ -96,10 +109,16 @@ class ManulaBot(Bot):
         if re.match(r'^/auth', text):
             return self.on_auth(chat_id, text)
 
+        if re.match(r'^/help', text):
+            return self.on_help(chat_id, text)
+
+        if re.match(r'^/type', text):
+            return self.on_type(chat_id, text)
+
     def handle_loop(self):
-        if not hasattr(settings, 'CHANNEL_ID'):
+        channel_id = getattr(settings, 'CHANNEL_ID', None)
+        if channel_id is None:
             return
-        channel_id = settings.CHANNEL_ID
 
         self.parser.fetch()
         parse_result = self.parser.parse()
@@ -111,7 +130,7 @@ class ManulaBot(Bot):
         if parse_result['new_code']:
             for sector in self.parser.table_sector.all():
                 sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
-                self.sendMessage(channel_id, sector_text(sector))
+                self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
 
 
 if __name__ == '__main__':

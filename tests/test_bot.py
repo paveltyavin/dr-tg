@@ -6,7 +6,7 @@ from unittest import TestCase
 from unittest.mock import Mock
 
 from bot import ManulaBot
-from models import Parser
+from models import Parser, HELP_TEXT
 
 
 class BotTestCase(TestCase):
@@ -14,7 +14,9 @@ class BotTestCase(TestCase):
         self.parser = Parser()
         if hasattr(settings, 'CHAT_ID'):
             del settings.CHAT_ID
+        settings.CHANNEL_ID = 'CHANNEL_ID'
         self.bot = ManulaBot(None)
+        self.bot.type = True
         self.bot.sendMessage = Mock()
         self.bot.parser = self.parser
         self.bot.parser.fetch = Mock()
@@ -32,6 +34,10 @@ class BotTestCase(TestCase):
             html = f.read()
             html_bytes = bytes(html, encoding='cp1251')
             self.parser.g.setup_document(html_bytes)
+
+    def test_help(self):
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/help'})
+        self.bot.sendMessage.assert_called_once_with(None, HELP_TEXT)
 
     def test_code_fail(self):
         """
@@ -77,7 +83,7 @@ class BotTestCase(TestCase):
         self.parser.parse()
         self.set_html('pages/code_1.html')
         self.bot.handle_loop()
-        self.bot.sendMessage.assert_called_once_with(None, 'Новый уровень.')
+        self.bot.sendMessage.assert_called_once_with('CHANNEL_ID', 'Новый уровень.')
 
     def test_new_tip(self):
         """Если возникает новая подсказка, то бот должен послать об этом сообщение в канал"""
@@ -85,18 +91,20 @@ class BotTestCase(TestCase):
         self.parser.parse()
         self.set_html('pages/tip_2.html')
         self.bot.handle_loop()
-        self.bot.sendMessage.assert_called_once_with(None, 'Подсказка: Ответ на спойлер: пустырь')
+        self.bot.sendMessage.assert_called_once_with('CHANNEL_ID', 'Подсказка: Ответ на спойлер: пустырь')
 
     def test_new_code(self):
         """
-        Если какой-то появился новый код судя по движку,
-        то бот должен послать табличку об этом в канал"""
+        Если в движке появился новый пробитый код,
+        то бот должен послать табличку об этом в канал.
+        Обратите внимание на взятый код по 11-й метке.
+        """
         self.set_html('pages/code_1.html')
         self.parser.parse()
         self.set_html('pages/code_2.html')
         self.bot.handle_loop()
         self.bot.sendMessage.assert_called_once_with(
-            None,
+            'CHANNEL_ID',
             'основные коды\n'
             '```\n'
             ' 1 3   V    11 1+       \n'
@@ -110,4 +118,39 @@ class BotTestCase(TestCase):
             ' 9 1   V    \n'
             '10 1+       \n'
             '```',
+            parse_mode='Markdown',
         )
+
+        self.bot.sendMessage.reset_mock()
+        self.set_html('pages/code_3.html')
+        self.bot.handle_loop()
+
+        self.bot.sendMessage.assert_called_once_with(
+            'CHANNEL_ID',
+            'основные коды\n'
+            '```\n'
+            ' 1 3   V    11 1+  V    \n'
+            ' 2 2   V    12 1   V    \n'
+            ' 3 3   V    13 1+  V    \n'
+            ' 4 2   V    14 1   V    \n'
+            ' 5 2   V    \n'
+            ' 6 1   V    \n'
+            ' 7 1   V    \n'
+            ' 8 2   V    \n'
+            ' 9 1   V    \n'
+            '10 1+       \n'
+            '```',
+            parse_mode='Markdown',
+        )
+
+    def test_type(self):
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type'})
+        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Включен')
+
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type off'})
+        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Выключен')
+
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type on'})
+        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Включен')
