@@ -10,7 +10,9 @@ Telegram-бот для игры в [дозор](http://dzzzr.ru). Являетс
 
 # Gif
 
-![cords](gif/cords.gif?raw=true "cords")
+![cords](gif/cords.gif "cords")
+
+![code](gif/code.gif "code")
 
 # Использование
 
