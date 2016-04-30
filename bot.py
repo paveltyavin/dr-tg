@@ -7,13 +7,23 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
-LINK_RE = re.compile(r'/link', flags=re.I)
 CODE_RE = re.compile(r'\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b', flags=re.I)
+# TODO: ^^^ эту регулярку можно переписать, она какая-то громоздская
 
 
 class ManulaBot(Bot):
     freq = 28  # Частота рации
     type = False  # Режим ввода кодов
+
+    routes = (
+        (CORD_RE, 'on_cord'),
+        (r'^/link', 'on_link'),
+        (r'^/freq', 'on_freq'),
+        (CODE_RE, 'on_code'),
+        (r'^/auth', 'on_auth'),
+        (r'^/help', 'on_help'),
+        (r'^/type', 'on_type'),
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -94,26 +104,10 @@ class ManulaBot(Bot):
         if hasattr(settings, 'CHAT_ID'):
             chat_id = settings.CHAT_ID
 
-        if re.match(CORD_RE, text):
-            return self.on_cord(chat_id, text)
-
-        if re.match(LINK_RE, text):
-            return self.on_link(chat_id, text)
-
-        if re.match(r'^/freq', text):
-            return self.on_freq(chat_id, text)
-
-        if re.match(CODE_RE, text):
-            return self.on_code(chat_id, text)
-
-        if re.match(r'^/auth', text):
-            return self.on_auth(chat_id, text)
-
-        if re.match(r'^/help', text):
-            return self.on_help(chat_id, text)
-
-        if re.match(r'^/type', text):
-            return self.on_type(chat_id, text)
+        for pattern, method_str in self.routes:
+            method = getattr(self, method_str, None)
+            if method is not None and re.match(pattern, text):
+                method(chat_id, text)
 
     def handle_loop(self):
         channel_id = getattr(settings, 'CHANNEL_ID', None)
@@ -138,4 +132,4 @@ if __name__ == '__main__':
     bot.message_loop()
     while 1:
         bot.handle_loop()
-        time.sleep(10)
+        time.sleep(getattr(settings, 'SLEEP_SECONDS', 10))
