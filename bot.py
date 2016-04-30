@@ -7,8 +7,9 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
+
+# TODO: эту регулярку можно переписать, она какая-то громоздская
 CODE_RE = re.compile(r'\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b', flags=re.I)
-# TODO: ^^^ эту регулярку можно переписать, она какая-то громоздская
 
 
 class ManulaBot(Bot):
