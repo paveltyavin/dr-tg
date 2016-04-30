@@ -12,8 +12,7 @@ from models import Parser, HELP_TEXT
 class BotTestCase(TestCase):
     def setUp(self):
         self.parser = Parser()
-        if hasattr(settings, 'CHAT_ID'):
-            del settings.CHAT_ID
+        settings.CHAT_ID = 'CHAT_ID'
         settings.CHANNEL_ID = 'CHANNEL_ID'
         self.bot = ManulaBot(None)
         self.bot.type = True
@@ -37,7 +36,7 @@ class BotTestCase(TestCase):
 
     def test_help(self):
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/help'})
-        self.bot.sendMessage.assert_called_once_with(None, HELP_TEXT)
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', HELP_TEXT)
 
     def test_code_fail(self):
         """
@@ -46,7 +45,7 @@ class BotTestCase(TestCase):
         """
         self.parser.take_code = Mock(return_value='Код не принят')
         self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4'})
-        self.bot.sendMessage.assert_called_once_with(None, 'dr4 : Код не принят')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'dr4 : Код не принят')
 
     def test_code_success_one_metka(self):
         """
@@ -60,7 +59,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_2.html')
 
         self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4'})
-        self.bot.sendMessage.assert_called_once_with(None, 'dr4 : Принят код . Метка: 8')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'dr4 : Принят код . Метка: 8')
 
     def test_code_success_multiple_metka(self):
         """то же, что в методе test_code_success_one_metka, только несколько возможных меток"""
@@ -70,12 +69,12 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_3.html')
 
         self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4'})
-        self.bot.sendMessage.assert_called_once_with(None, 'dr4 : Принят код . Метка: 8 или 11')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'dr4 : Принят код . Метка: 8 или 11')
 
     def test_freq(self):
         """Тест сообщения на запрос частоты"""
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/freq'})
-        self.bot.sendMessage.assert_called_once_with(None, 'Основная частота: 433.775 ||| Канал Midland: 28')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'Основная частота: 433.775 ||| Канал Midland: 28')
 
     def test_new_level(self):
         """Если наступает новый уровень, то бот должен послать об этом сообщение в канал"""
@@ -145,12 +144,12 @@ class BotTestCase(TestCase):
 
     def test_type(self):
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type'})
-        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Включен')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'Режим ввода кодов: Включен')
 
         self.bot.sendMessage.reset_mock()
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type off'})
-        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Выключен')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'Режим ввода кодов: Выключен')
 
         self.bot.sendMessage.reset_mock()
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type on'})
-        self.bot.sendMessage.assert_called_once_with(None, 'Режим ввода кодов: Включен')
+        self.bot.sendMessage.assert_called_once_with('CHAT_ID', 'Режим ввода кодов: Включен')
