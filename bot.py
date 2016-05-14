@@ -7,38 +7,108 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
-
-# TODO: эту регулярку можно переписать, она какая-то громоздская
-CODE_RE = re.compile(r'\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b', flags=re.I)
+STANDARD_CODE_PATTERN = '\d*[dд]\d*[rр]\d*'
 
 
 class ManulaBot(Bot):
     freq = 28  # Частота рации
+    parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
 
     routes = (
         (CORD_RE, 'on_cord'),
-        (r'^/link', 'on_link'),
+            # (r'^/link', 'on_link'),
         (r'^/freq', 'on_freq'),
-        (CODE_RE, 'on_code'),
-        (r'^/auth', 'on_auth'),
+            # (CODE_RE, 'on_code'),
+            # (r'^/auth', 'on_auth'),
         (r'^/help', 'on_help'),
         (r'^/type', 'on_type'),
+        (r'^/parse', 'on_parse'),
+        (r'^/cookie', 'on_cookie'),
+        (r'^/pin', 'on_pin'),
+        (r'^/pattern', 'on_pattern'),
     )
+
+    def set_data(self, key, value):
+        setattr(self, key, value)
+        self.parser.db['bot'].upsert({
+            'token': settings.TOKEN,
+            key: value
+        }, ['token'])
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.parser = Parser()
+
+        self.parser.db['bot'].upsert({'token': settings.TOKEN}, ['token'])
+        data = self.parser.db['bot'].find_one(**{'token': settings.TOKEN})
+        for key in [
+            'freq',
+            'type',
+            'parse',
+        ]:
+            value = data.get(key)
+            if value is not None:
+                setattr(self, key, value)
+
+        cookie = data.get('cookie')
+        if cookie:
+            self.parser.set_cookie(cookie)
+
+        pin = data.get('pin')
+        if pin:
+            self.parser.set_pin(pin)
+
+        code_pattern = data.get('code_pattern')
+        if code_pattern:
+            self.code_pattern = code_pattern
+        else:
+            self.code_pattern = STANDARD_CODE_PATTERN
 
     def on_help(self, chat_id, text):
         self.sendMessage(chat_id, HELP_TEXT)
 
     def on_type(self, chat_id, text):
         if 'on' in text:
-            self.type = True
+            self.set_data('type', True)
         elif 'off' in text:
-            self.type = False
+            self.set_data('type', False)
         self.sendMessage(chat_id, "Режим ввода кодов: {}".format("Включен" if self.type else "Выключен"))
+
+    def on_parse(self, chat_id, text):
+        if 'on' in text:
+            self.set_data('parse', True)
+        elif 'off' in text:
+            self.set_data('parse', False)
+        self.sendMessage(chat_id, "Режим парсинга движка: {}".format("Включен" if self.parse else "Выключен"))
+
+    def on_cookie(self, chat_id, text):
+        for cookie in re.findall('(\w{24})', text):
+            self.parser.set_cookie(cookie)
+            self.set_data('cookie', cookie)
+            self.sendMessage(chat_id, "Кука установлена")
+
+    def on_pin(self, chat_id, text):
+        text = text.replace('/pin', '').strip()
+        self.parser.set_pin(text)
+        self.set_data('pin', text)
+        self.sendMessage(chat_id, "Пин установлен")
+
+    def on_pattern(self, chat_id, text):
+        text = text.replace('/pattern', '').strip()
+        if 'standar' in text:
+            text = STANDARD_CODE_PATTERN
+
+        if text:
+            try:
+                re.compile(text)
+            except re.error:
+                self.sendMessage(chat_id, "Шаблон кода не установлен")
+
+            self.set_data('code_pattern', text)
+            self.sendMessage(chat_id, "Шаблон кода установлен: {}".format(text))
+        else:
+            self.sendMessage(chat_id, "Шаблон кода: {}".format(self.code_pattern))
 
     def on_link(self, chat_id, text):
         self.sendMessage(chat_id, 'Ссылка')
@@ -51,10 +121,12 @@ class ManulaBot(Bot):
     def on_code(self, chat_id, text):
         if not self.type:
             return
-        code_list = re.findall(CODE_RE, text)
+        code_list = re.findall(self.code_pattern, text, flags=re.I)
 
         for code in code_list:
             take_message = self.parser.take_code(code)
+            if not take_message:
+                continue
             message = "{} : {}".format(code, take_message)
 
             if 'Принят код' in take_message:
@@ -71,7 +143,7 @@ class ManulaBot(Bot):
 
     def on_freq(self, chat_id, text):
         try:
-            self.freq = int(text.replace('/freq', ''))
+            self.set_data('freq', int(text.replace('/freq', '')))
         except ValueError:
             pass
         freq_result = freq_dict.get(self.freq)
@@ -98,7 +170,9 @@ class ManulaBot(Bot):
         self.sendMessage(chat_id, 'Авторизация установлена. Логин = {}'.format(login))
 
     def on_chat_message(self, msg):
-        text = msg['text']
+        text = msg.get('text')
+        if text is None:
+            return
         chat_id = msg['chat'].get('id')
 
         # Отвечает не собеседнику, а в определенный чат, если в settings этот чат задан явно.
@@ -107,10 +181,15 @@ class ManulaBot(Bot):
 
         for pattern, method_str in self.routes:
             method = getattr(self, method_str, None)
-            if method is not None and re.match(pattern, text):
+            if method is not None and re.search(pattern, text):
                 method(chat_id, text)
 
+        if re.search(self.code_pattern, text, flags=re.I):
+            self.on_code(chat_id, text)
+
     def handle_loop(self):
+        if not self.parse:
+            return
         channel_id = getattr(settings, 'CHANNEL_ID', None)
         if channel_id is None:
             return

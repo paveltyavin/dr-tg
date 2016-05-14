@@ -7,7 +7,7 @@ import settings
 
 from decorators import throttle
 
-host = 'http://classic.dzzzr.ru/moscow/'
+host = 'http://classic.dzzzr.ru/'
 start_url = urljoin(host, 'moscow/')
 drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'nostat': 'on',
@@ -18,6 +18,8 @@ drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'legend': '',
     'bonus': 'on',
     'kladMap': '',
+    'mes': '',
+    'err': '11',
 })))
 
 red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
@@ -28,6 +30,7 @@ class Parser(object):
 
     def __init__(self):
         self.g = Grab()
+        self.g.setup(timeout=100)
         self.db = dataset.connect(settings.DATASET)
 
         self.table_code = self.db['code']
@@ -41,6 +44,17 @@ class Parser(object):
                 self.g.cookies.set(**cookie_dict)
             except ValueError:
                 pass
+
+    def set_cookie(self, cookie):
+        self.g.cookies.set(
+            name='dozorSiteSession',
+            value=cookie,
+            domain='.dzzzr.ru',
+            path='/',
+        )
+
+    def set_pin(self, userpwd):
+        self.g.setup(userpwd=userpwd)
 
     def fetch(self):
         """Загружает страницу движка"""
@@ -67,6 +81,9 @@ class Parser(object):
         code = code.replace('р', 'r')
 
         self.g.go(drive_url)
+        if not self.g.doc.select('.//*[@name="cod"]').exists():
+            return ""
+
         self.g.doc.set_input('cod', code)
         self.g.doc.submit()
         message = self.g.doc.select('//div[@class="sysmsg"]//b').text()
@@ -88,17 +105,22 @@ class Parser(object):
             'new_code': False,  # Новый пробитый код?
             'sector_list': [],  # Инфо о взятых кодах
         }
-        div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        try:
+            div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        except IndexError:
+            return result
         sector_list_str = div.html()
         level_number_str = div.node().getprevious().text
         level_number_str = level_number_str.replace('Задание', '')
+        old_level = self.current_level
         current_level = int(level_number_str.strip())
         if self.current_level != current_level:
             self.current_level = current_level
             self.table_sector.delete()
             self.table_code.delete()
             self.table_tip.delete()
-            result['new_level'] = True
+            if old_level is not None:
+                result['new_level'] = True
 
         sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
         sector_list_str = sector_list_str.split('<br></div>')[0]
@@ -128,7 +150,8 @@ class Parser(object):
                     self.table_code.insert(filters)
                 elif old_code['taken'] != taken:
                     self.table_code.update(filters, ['sector_id', 'metka'])
-                    result['new_code'] = True
+                    if 'бонусные коды' not in sector['name']:
+                        result['new_code'] = True
                     sector['code_list'].append(filters)
 
             result['sector_list'].append(sector)
@@ -145,24 +168,29 @@ class Parser(object):
         result = {
             'tip_list': [],  # Новые подсказки.
         }
-        self.table_tip.delete()
 
         div_list = self.g.doc.select('//div[@class="title"]')
-        div = next((div for div in div_list if 'Подсказка l:' in div.html()), None)
-        if div is None:
-            return result
-        tip_node = div.node().getnext()
-        tip_text = tip_node.text_content()
-        old_tip = self.table_tip.find_one(index=1)
-        self.table_tip.upsert({
-            'text': tip_text,
-            'index': 1,  # номер подсказки
-        }, ['index'])
-        if old_tip is None:
-            result['tip_list'].append({
-                'text': tip_text,
-                'index': 1,
-            })
+
+        for div in div_list:
+            for tip_title, tip_index in (
+                    ('Подсказка l:', 1),
+                    ('Подсказка 2:', 2),
+            ):
+                if tip_title in div.html():
+                    tip_node = div.node().getnext()
+                    tip_text = tip_node.text_content()
+                    if 'Не предусмотрена' in tip_text:
+                        continue
+                    old_tip = self.table_tip.find_one(index=tip_index)
+                    self.table_tip.upsert({
+                        'text': tip_text,
+                        'index': tip_index,  # номер подсказки
+                    }, ['index'])
+                    if old_tip is None:
+                        result['tip_list'].append({
+                            'text': tip_text,
+                            'index': tip_index,
+                        })
         return result
 
 
@@ -171,6 +199,10 @@ freq_dict = {x: "{:.3f}".format(433.075 + x * 0.025) for x in range(1, 70)}
 HELP_TEXT = '''
 /freq - частота рации. Для настройки канала напишите, например, "/freq 27"
 /link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>"
-/auth - логин, под которым авторизован бот. "/auth <логин> <пароль>" - авторизация на сайте дозора. Используйте это команду в личке с ботом.
-/type - актуальная настройку "ввода кодов". Можно отключить так: "/type off" или включить "/type on"
+/pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard"
+/parse - парсить ли движок дозора. Можно отключить так: "/parse off" или включить "/parse on".
+/cookie - устанавливает авторизационную куку dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v"
+/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_capitan:123456"
+/type - актуальная настройку "ввода кодов". Можно отключить так: "/type off" или включить "/type on".
+Коды ищутся по регулярному выражению, изменяемому через настройку /pattern
 '''
