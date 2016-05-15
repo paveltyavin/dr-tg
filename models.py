@@ -19,15 +19,12 @@ drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'bonus': 'on',
     'kladMap': '',
     'mes': '',
-    'err': '11',
 })))
 
 red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
 
 
 class Parser(object):
-    current_level = None
-
     def __init__(self):
         self.g = Grab()
         self.g.setup(timeout=100)
@@ -37,6 +34,7 @@ class Parser(object):
         self.table_sector = self.db['sector']
         self.table_tip = self.db['tip']
         self.table_cookies = self.db['cookies']
+        self.table_bot = self.db['bot']
 
         for cookie_dict in self.db['cookies']:
             del cookie_dict['id']
@@ -86,6 +84,9 @@ class Parser(object):
 
         self.g.doc.set_input('cod', code)
         self.g.doc.submit()
+
+        if not self.g.doc.select('//div[@class="sysmsg"]//b').exists():
+            return ""
         message = self.g.doc.select('//div[@class="sysmsg"]//b').text()
         return message
 
@@ -112,15 +113,20 @@ class Parser(object):
         sector_list_str = div.html()
         level_number_str = div.node().getprevious().text
         level_number_str = level_number_str.replace('Задание', '')
-        old_level = self.current_level
-        current_level = int(level_number_str.strip())
-        if self.current_level != current_level:
-            self.current_level = current_level
+        level = int(level_number_str.strip())
+
+        bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
+
+        if bot_data.get('level') != level:
+            self.table_bot.upsert({
+                'token': settings.TOKEN,
+                'level': level,
+            }, ['token'])
+
             self.table_sector.delete()
             self.table_code.delete()
             self.table_tip.delete()
-            if old_level is not None:
-                result['new_level'] = True
+            result['new_level'] = True
 
         sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
         sector_list_str = sector_list_str.split('<br></div>')[0]

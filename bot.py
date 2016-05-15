@@ -8,6 +8,7 @@ from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
 STANDARD_CODE_PATTERN = '\d*[dд]\d*[rр]\d*'
+# STANDARD_CODE_PATTERN = '\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b'
 
 
 class ManulaBot(Bot):
@@ -31,7 +32,7 @@ class ManulaBot(Bot):
 
     def set_data(self, key, value):
         setattr(self, key, value)
-        self.parser.db['bot'].upsert({
+        self.parser.table_bot.upsert({
             'token': settings.TOKEN,
             key: value
         }, ['token'])
@@ -40,8 +41,8 @@ class ManulaBot(Bot):
         super().__init__(*args, **kwargs)
         self.parser = Parser()
 
-        self.parser.db['bot'].upsert({'token': settings.TOKEN}, ['token'])
-        data = self.parser.db['bot'].find_one(**{'token': settings.TOKEN})
+        self.parser.table_bot.upsert({'token': settings.TOKEN}, ['token'])
+        data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
         for key in [
             'freq',
             'type',
@@ -119,7 +120,7 @@ class ManulaBot(Bot):
             self.sendLocation(chat_id, *cord_list)
 
     def on_code(self, chat_id, text):
-        if not self.type:
+        if not self.type or len(text.strip()) < 3:
             return
         code_list = re.findall(self.code_pattern, text, flags=re.I)
 
@@ -184,8 +185,8 @@ class ManulaBot(Bot):
             if method is not None and re.search(pattern, text):
                 method(chat_id, text)
 
-        if re.search(self.code_pattern, text, flags=re.I):
-            self.on_code(chat_id, text)
+        if len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
+            self.on_code(chat_id, text.strip().lower())
 
     def handle_loop(self):
         if not self.parse:
