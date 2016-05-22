@@ -87,7 +87,8 @@ class Parser(object):
 
         if not self.g.doc.select('//div[@class="sysmsg"]//b').exists():
             return ""
-        message = self.g.doc.select('//div[@class="sysmsg"]//b').text()
+        message = self.g.doc.select('//div[@class="sysmsg"]//b').html()
+        message = message.replace('<b>', '').replace('</b>', '')
         return message
 
     def parse(self):
@@ -185,7 +186,7 @@ class Parser(object):
                 if tip_title in div.html():
                     tip_node = div.node().getnext()
                     tip_text = tip_node.text_content()
-                    if 'Не предусмотрена' in tip_text:
+                    if 'не предусмотрена' in tip_text.lower():
                         continue
                     old_tip = self.table_tip.find_one(index=tip_index)
                     self.table_tip.upsert({

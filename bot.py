@@ -7,7 +7,9 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
-STANDARD_CODE_PATTERN = '\d*[dд]\d*[rр]\d*'
+STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
+
+
 # STANDARD_CODE_PATTERN = '\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b'
 
 
@@ -18,9 +20,8 @@ class ManulaBot(Bot):
 
     routes = (
         (CORD_RE, 'on_cord'),
-            # (r'^/link', 'on_link'),
+        (r'^/link', 'on_link'),
         (r'^/freq', 'on_freq'),
-            # (CODE_RE, 'on_code'),
             # (r'^/auth', 'on_auth'),
         (r'^/help', 'on_help'),
         (r'^/type', 'on_type'),
@@ -88,12 +89,22 @@ class ManulaBot(Bot):
             self.parser.set_cookie(cookie)
             self.set_data('cookie', cookie)
             self.sendMessage(chat_id, "Кука установлена")
+        else:
+            self.sendMessage(chat_id, "Кука не найдена в сообщении")
 
     def on_pin(self, chat_id, text):
         text = text.replace('/pin', '').strip()
-        self.parser.set_pin(text)
-        self.set_data('pin', text)
-        self.sendMessage(chat_id, "Пин установлен")
+        if text:
+            self.parser.set_pin(text)
+            self.set_data('pin', text)
+            self.sendMessage(chat_id, "Пин установлен")
+        else:
+            data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
+            pin = data.get('pin')
+            if pin:
+                self.sendMessage(chat_id, "Пин для игры: {}".format(pin))
+            else:
+                self.sendMessage(chat_id, "Пин отсутствует")
 
     def on_pattern(self, chat_id, text):
         text = text.replace('/pattern', '').strip()
@@ -112,7 +123,10 @@ class ManulaBot(Bot):
             self.sendMessage(chat_id, "Шаблон кода: {}".format(self.code_pattern))
 
     def on_link(self, chat_id, text):
-        self.sendMessage(chat_id, 'Ссылка')
+        data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
+        pin = data.get('pin')
+        if pin:
+            self.sendMessage(chat_id, "Пин для игры: {}".format(pin))
 
     def on_cord(self, chat_id, text):
         cord_list = re.findall(CORD_RE, text)
@@ -120,8 +134,6 @@ class ManulaBot(Bot):
             self.sendLocation(chat_id, *cord_list)
 
     def on_code(self, chat_id, text):
-        if not self.type or len(text.strip()) < 3:
-            return
         code_list = re.findall(self.code_pattern, text, flags=re.I)
 
         for code in code_list:
@@ -130,7 +142,7 @@ class ManulaBot(Bot):
                 continue
             message = "{} : {}".format(code, take_message)
 
-            if 'Принят код' in take_message:
+            if 'принят' in take_message.lower():
                 # Если код принят, то парсим движок на принятые коды.
                 parse_result = self.parser.parse()
                 metka_list = []
@@ -178,14 +190,17 @@ class ManulaBot(Bot):
 
         # Отвечает не собеседнику, а в определенный чат, если в settings этот чат задан явно.
         if hasattr(settings, 'CHAT_ID'):
-            chat_id = settings.CHAT_ID
+            if chat_id and chat_id != settings.CHAT_ID:
+                return
+            else:
+                chat_id = settings.CHAT_ID
 
         for pattern, method_str in self.routes:
             method = getattr(self, method_str, None)
             if method is not None and re.search(pattern, text):
                 method(chat_id, text)
 
-        if len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
+        if self.type and 2 < len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
             self.on_code(chat_id, text.strip().lower())
 
     def handle_loop(self):
