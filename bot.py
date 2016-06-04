@@ -7,7 +7,8 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
-STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
+# STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
+STANDARD_CODE_PATTERN = '(?:([1-9]+))?(?:([dд])|[rр])(?:([1-9]+))?(?(2)[rр]|[dд])(?(1)[1-9]*|(?(3)[1-9]*|[1-9]+))'
 
 
 # STANDARD_CODE_PATTERN = '\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b'
