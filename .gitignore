@@ -1,3 +1,4 @@
 .idea
 *.db
 settings.py
+fabfile.py
