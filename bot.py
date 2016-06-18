@@ -7,10 +7,8 @@ from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text
 
 CORD_RE = '([35]\d[\.,]\d+)'
-# STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
-STANDARD_CODE_PATTERN = '(?:([1-9]+))?(?:([dд])|[rр])(?:([1-9]+))?(?(2)[rр]|[dд])(?(1)[1-9]*|(?(3)[1-9]*|[1-9]+))'
-
-
+STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
+# STANDARD_CODE_PATTERN = '(?:([1-9]+))?(?:([dд])|[rр])(?:([1-9]+))?(?(2)[rр]|[dд])(?(1)[1-9]*|(?(3)[1-9]*|[1-9]+))'
 # STANDARD_CODE_PATTERN = '\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b'
 
 
@@ -23,13 +21,13 @@ class ManulaBot(Bot):
         (CORD_RE, 'on_cord'),
         (r'^/link', 'on_link'),
         (r'^/freq', 'on_freq'),
-            # (r'^/auth', 'on_auth'),
         (r'^/help', 'on_help'),
         (r'^/type', 'on_type'),
         (r'^/parse', 'on_parse'),
         (r'^/cookie', 'on_cookie'),
         (r'^/pin', 'on_pin'),
         (r'^/pattern', 'on_pattern'),
+        (r'^/status', 'on_status'),
     )
 
     def set_data(self, key, value):
@@ -90,8 +88,6 @@ class ManulaBot(Bot):
             self.parser.set_cookie(cookie)
             self.set_data('cookie', cookie)
             self.sendMessage(chat_id, "Кука установлена")
-        else:
-            self.sendMessage(chat_id, "Кука не найдена в сообщении")
 
     def on_pin(self, chat_id, text):
         text = text.replace('/pin', '').strip()
@@ -138,6 +134,8 @@ class ManulaBot(Bot):
         code_list = re.findall(self.code_pattern, text, flags=re.I)
 
         for code in code_list:
+            if len(code) < 3:
+                return
             take_message = self.parser.take_code(code)
             if not take_message:
                 continue
@@ -169,19 +167,14 @@ class ManulaBot(Bot):
                 str(self.freq),
             ))
 
-    def on_auth(self, chat_id, text):
-        try:
-            login, password = map(
-                lambda x: x.strip(),
-                filter(
-                    bool,
-                    text.replace('/auth', '').split(' ')
-                )
-            )
-        except ValueError:
-            return
-        self.parser.auth(login, password)
-        self.sendMessage(chat_id, 'Авторизация установлена. Логин = {}'.format(login))
+    def on_status(self, chat_id, text):
+        self.parser.fetch()
+        body = self.parser.g.doc.body.decode('cp1251')
+        connected = 'лог игры' in body.lower()
+        if connected:
+            self.sendMessage(chat_id, 'Движок подключен')
+        else:
+            self.sendMessage(chat_id, 'Проблемы с подключением к движку')
 
     def on_chat_message(self, msg):
         text = msg.get('text')
@@ -229,4 +222,4 @@ if __name__ == '__main__':
     bot.message_loop()
     while 1:
         bot.handle_loop()
-        time.sleep(getattr(settings, 'SLEEP_SECONDS', 10))
+        time.sleep(getattr(settings, 'SLEEP_SECONDS', 30))

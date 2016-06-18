@@ -58,19 +58,6 @@ class Parser(object):
         """Загружает страницу движка"""
         self.g.go(drive_url)
 
-    def auth(self, login='', password=''):
-        """Авторизация на сайте дозора"""
-        self.table_cookies.delete()
-
-        self.g.go(start_url)
-        self.g.doc.set_input('login', login)
-        self.g.doc.set_input('password', password)
-        self.g.doc.submit()
-        cookie_list = self.g.cookies.get_dict()
-
-        for cookie_dict in cookie_list:
-            self.table_cookies.insert(cookie_dict)
-
     @throttle(seconds=2)
     def take_code(self, code):
         """Пробивка кода. Возвращает сообщение движка"""
