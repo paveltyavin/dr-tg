@@ -197,6 +197,11 @@ class ManulaBot(Bot):
         if self.type and 2 < len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
             self.on_code(chat_id, text.strip().lower())
 
+    def send_ko(self, channel_id):
+        for sector in self.parser.table_sector.all():
+            sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
+            self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
+
     def handle_loop(self):
         if not self.parse:
             return
@@ -206,15 +211,16 @@ class ManulaBot(Bot):
 
         self.parser.fetch()
         parse_result = self.parser.parse()
+
         if parse_result['new_level']:
             self.sendMessage(channel_id, 'Новый уровень')
+            self.send_ko(channel_id)
+
         for tip in parse_result['tip_list']:
             self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))
 
         if parse_result['new_code']:
-            for sector in self.parser.table_sector.all():
-                sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
-                self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
+            self.send_ko(channel_id)
 
         if parse_result['new_spoiler']:
             self.sendMessage(channel_id, 'Открыт спойлер')
