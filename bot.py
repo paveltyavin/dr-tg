@@ -141,7 +141,7 @@ class ManulaBot(Bot):
                 continue
             message = "{} : {}".format(code, take_message)
 
-            if 'принят' in take_message.lower() and 'код не принят' not in take_message.lower():
+            if False and 'принят' in take_message.lower() and 'код не принят' not in take_message.lower():
                 # Если код принят, то парсим движок на принятые коды.
                 parse_result = self.parser.parse()
                 metka_list = []
