@@ -3,3 +3,6 @@
 settings.py
 fabfile.py
 log/
+.pyc
+__pycache__/
+.DS_Store
