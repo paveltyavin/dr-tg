@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import codecs
 from urllib.parse import urlencode, urljoin
 
 import dataset
@@ -69,7 +70,7 @@ class Parser(object):
             os.makedirs(dir_1)
         if not os.path.exists(dir_2):
             os.makedirs(dir_2)
-        with open(filepath, mode='w+') as f:
+        with codecs.open(filepath, mode='w+', encoding='utf-8') as f:
             html = self.g.doc.body.decode('cp1251')
             f.write(html)
 
