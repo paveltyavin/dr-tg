@@ -1,3 +1,5 @@
+from datetime import datetime
+import os
 from urllib.parse import urlencode, urljoin
 
 import dataset
@@ -57,6 +59,19 @@ class Parser(object):
     def fetch(self):
         """Загружает страницу движка"""
         self.g.go(drive_url)
+        n = datetime.utcnow()
+        dir_1 = "./log/{}".format(n.strftime("%H"))
+        dir_2 = "{}/{}".format(dir_1, n.strftime("%H_%M"))
+        filepath = "{}/log_{}.html".format(dir_2, n.strftime("%H_%M_%S"))
+        if not os.path.exists('./log'):
+            os.makedirs('./log')
+        if not os.path.exists(dir_1):
+            os.makedirs(dir_1)
+        if not os.path.exists(dir_2):
+            os.makedirs(dir_2)
+        with open(filepath, mode='w+') as f:
+            html = self.g.doc.body.decode('cp1251')
+            f.write(html)
 
     @throttle(seconds=2)
     def take_code(self, code):
@@ -167,8 +182,8 @@ class Parser(object):
 
         for div in div_list:
             for tip_title, tip_index in (
-                    ('Подсказка l:', 1),
-                    ('Подсказка 2:', 2),
+                ('Подсказка l:', 1),
+                ('Подсказка 2:', 2),
             ):
                 if tip_title in div.html():
                     tip_node = div.node().getnext()
