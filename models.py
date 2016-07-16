@@ -71,7 +71,7 @@ class Parser(object):
             os.makedirs(dir_2)
         with open(filepath, mode='w+') as f:
             html = self.g.doc.body.decode('cp1251')
-            # f.write(html)
+            f.write(html)
 
     @throttle(seconds=2)
     def take_code(self, code):
