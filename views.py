@@ -1,3 +1,6 @@
+import os
+from io import BytesIO
+
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -24,7 +27,8 @@ class KoImg(object):
 
         self.img = Image.new('RGB', self.size, (255, 255, 255))
         self.draw = ImageDraw.Draw(self.img)
-        self.font_path = 'arial.ttf'
+        # self.font_path = 'arial.ttf'
+        self.font_path = os.path.abspath('./arial.ttf')
 
         # Рассчитываем ширину и длину клетки в зависимости от кол-ва кодов. Есть несколько интервалов:
         # 0-10, 10-20, 20-40, 40-80, 80-160
@@ -49,6 +53,10 @@ class KoImg(object):
         self.draw_lattice()
         self.draw_numbers(len(ko_list))
         self.write_ko(ko_list)
+
+        f = BytesIO()
+        self.img.save(f, format='png')
+        self.content = f.getvalue()
 
     def draw_lattice(self):
         for y in range(int(self.cell_height), self.img.size[1], self.cell_height):

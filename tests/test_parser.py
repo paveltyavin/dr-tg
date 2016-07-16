@@ -87,6 +87,21 @@ class ParserTestCase(unittest.TestCase):
         tip = self.parser.table_tip.find_one()
         self.assertEqual(tip['text'], tip_text)
 
+    def test_parse_tip_with_numbers(self):
+        self.set_html('pages/tip_11.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['tip_list']), 0)
+        self.assertEqual(self.parser.table_tip.count(), 0)  # Подсказок в базе не должно быть
+
+        tip_text = 'Ответ на спойлер: пустырь'
+        self.set_html('pages/tip_12.html')
+        result = self.parser.parse()
+        self.assertEqual(result['tip_list'][0]['text'], tip_text)
+
+        self.assertEqual(self.parser.table_tip.count(), 1)  # Должна появится первая подсказка
+        tip = self.parser.table_tip.find_one()
+        self.assertEqual(tip['text'], tip_text)
+
     def test_parse_spoiler(self):
         self.set_html('pages/spoiler_1.html')
         result = self.parser.parse()

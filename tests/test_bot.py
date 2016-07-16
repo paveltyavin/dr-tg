@@ -9,6 +9,7 @@ from unittest.mock import Mock, patch
 
 from bot import ManulaBot
 from models import Parser, HELP_TEXT
+from views import KoImg
 
 
 class BotTestCase(TestCase):
@@ -169,3 +170,10 @@ class BotTestCase(TestCase):
         self.bot.sendMessage.reset_mock()
         self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type on'})
         self.bot.sendMessage.assert_called_with('CHAT_ID', 'Режим ввода кодов: Включен')
+
+
+class BotImgTestCase(TestCase):
+    def test_ko_img(self):
+        self.bot = ManulaBot(settings.TOKEN)
+        ko_img = KoImg(ko_list=['1', '2', '3'])
+        self.bot.sendPhoto(818051, ('ko.png', ko_img.content))

@@ -4,10 +4,12 @@ import re
 import time
 
 from models import Parser, freq_dict, HELP_TEXT
-from views import sector_text
+from views import sector_text, KoImg
 
 CORD_RE = '([35]\d[\.,]\d+)'
 STANDARD_CODE_PATTERN = '\d*[dдrрDДRР]\d*[dдrрDДRР]\d*'
+
+
 # STANDARD_CODE_PATTERN = '(?:([1-9]+))?(?:([dд])|[rр])(?:([1-9]+))?(?(2)[rр]|[dд])(?(1)[1-9]*|(?(3)[1-9]*|[1-9]+))'
 # STANDARD_CODE_PATTERN = '\b\d*[dд]\d*[rр]\d*(?<=\w\w\w)\b|\b\d*[rр]\d*[dд]\d*(?<=\w\w\w)\b'
 
@@ -20,6 +22,8 @@ class ManulaBot(Bot):
     routes = (
         (CORD_RE, 'on_cord'),
         (r'^/link', 'on_link'),
+        (r'^/test_ko_img', 'on_test_ko_img'),
+        (r'^/test_error', 'on_test_error'),
         (r'^/freq', 'on_freq'),
         (r'^/help', 'on_help'),
         (r'^/type', 'on_type'),
@@ -88,6 +92,12 @@ class ManulaBot(Bot):
             self.parser.set_cookie(cookie)
             self.set_data('cookie', cookie)
             self.sendMessage(chat_id, "Кука установлена")
+
+    def on_test_ko_img(self, chat_id, text):
+        self.send_ko_img(chat_id)
+
+    def on_test_error(self, chat_id, text):
+        raise Exception
 
     def on_pin(self, chat_id, text):
         text = text.replace('/pin', '').strip()
@@ -202,6 +212,12 @@ class ManulaBot(Bot):
             sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
             self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
 
+    def send_ko_img(self, channel_id):
+        for sector in self.parser.table_sector.all():
+            ko_list = list(self.parser.table_code.find(sector_id=sector['id']))
+            ko_img = KoImg(ko_list=ko_list)
+            self.sendPhoto(channel_id, ('ko.png', ko_img.content))
+
     def handle_loop(self):
         if not self.parse:
             return
@@ -215,6 +231,7 @@ class ManulaBot(Bot):
         if parse_result['new_level']:
             self.sendMessage(channel_id, 'Новый уровень')
             self.send_ko(channel_id)
+            # self.send_ko_img(channel_id)
 
         for tip in parse_result['tip_list']:
             self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))
