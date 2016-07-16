@@ -39,6 +39,14 @@ class Parser(object):
         self.table_cookies = self.db['cookies']
         self.table_bot = self.db['bot']
 
+        current_bot = self.table_bot.find_one(**{'token': settings.TOKEN})
+        if current_bot is None:
+            self.table_bot.insert({
+                'token': settings.TOKEN,
+                'level': None,
+                'spoiler': False,
+            })
+
         for cookie_dict in self.db['cookies']:
             del cookie_dict['id']
             try:
@@ -94,13 +102,14 @@ class Parser(object):
         message = message.replace('<b>', '').replace('</b>', '')
         return message
 
-    def parse(self):
+    def parse(self, update_db=True):
         result = {}
-        result.update(self._parse_level())
-        result.update(self._parse_tip())
+        result.update(self._parse_level(update_db=update_db))
+        result.update(self._parse_tip(update_db=update_db))
+        result.update(self._parse_spoiler(update_db=update_db))
         return result
 
-    def _parse_level(self):
+    def _parse_level(self, update_db=True):
         """
         Парсит страницу дозорного движка. Возвращает словарь с инфой об обновлении.
         Подробнее, что такое инфа обновления - в комментариях ниже
@@ -122,14 +131,15 @@ class Parser(object):
         bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
 
         if bot_data.get('level') != level:
-            self.table_bot.upsert({
-                'token': settings.TOKEN,
-                'level': level,
-            }, ['token'])
-
-            self.table_sector.delete()
-            self.table_code.delete()
-            self.table_tip.delete()
+            if update_db:
+                self.table_bot.upsert({
+                    'token': settings.TOKEN,
+                    'level': level,
+                    'spoiler': False,
+                }, ['token'])
+                self.table_sector.delete()
+                self.table_code.delete()
+                self.table_tip.delete()
             result['new_level'] = True
 
         sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
@@ -157,21 +167,24 @@ class Parser(object):
                     'sector_id': sector_index + 1,
                 }
                 if old_code is None:
-                    self.table_code.insert(filters)
+                    if update_db:
+                        self.table_code.insert(filters)
                 elif old_code['taken'] != taken:
-                    self.table_code.update(filters, ['sector_id', 'metka'])
+                    if update_db:
+                        self.table_code.update(filters, ['sector_id', 'metka'])
                     if 'бонусные коды' not in sector['name']:
                         result['new_code'] = True
                     sector['code_list'].append(filters)
 
             result['sector_list'].append(sector)
-            self.table_sector.upsert({
-                'id': sector_index + 1,
-                'name': sector_name,
-            }, ['id'])
+            if update_db:
+                self.table_sector.upsert({
+                    'id': sector_index + 1,
+                    'name': sector_name,
+                }, ['id'])
         return result
 
-    def _parse_tip(self):
+    def _parse_tip(self, update_db=True):
         """
         Парсит текст подсказок. Возвращает объект обновления
         """
@@ -192,10 +205,11 @@ class Parser(object):
                     if 'не предусмотрена' in tip_text.lower():
                         continue
                     old_tip = self.table_tip.find_one(index=tip_index)
-                    self.table_tip.upsert({
-                        'text': tip_text,
-                        'index': tip_index,  # номер подсказки
-                    }, ['index'])
+                    if update_db:
+                        self.table_tip.upsert({
+                            'text': tip_text,
+                            'index': tip_index,  # номер подсказки
+                        }, ['index'])
                     if old_tip is None:
                         result['tip_list'].append({
                             'text': tip_text,
@@ -203,18 +217,46 @@ class Parser(object):
                         })
         return result
 
+    def _parse_spoiler(self, update_db=True):
+        """
+        Парсит текст спойлера. Возвращает объект обновления
+        """
+        result = {
+            'new_spoiler': False,  # Новый открытый спойлер?
+        }
+
+        bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
+
+        if bot_data.get('spoiler'):
+            return result
+
+        level_div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        level_html = level_div.html()
+        if '<div class="title" style="padding-left:0">Спойлер</div>' in level_html:
+            result['new_spoiler'] = True
+            if update_db:
+                self.table_bot.upsert({
+                    'token': settings.TOKEN,
+                    'spoiler': True,
+                }, ['token'])
+
+        return result
+
 
 freq_dict = {x: "{:.3f}".format(433.075 + x * 0.025) for x in range(1, 70)}
 
 HELP_TEXT = '''
 /parse - парсить ли движок дозора. Можно отключить так: "/parse off" или включить "/parse on".
-/cookie - устанавливает авторизационную куку dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v"
 /status - проверка статуса подключения к движку.
-/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_capitan:123456"
 /type - актуальная настройку "ввода кодов". Можно отключить так: "/type off" или включить "/type on".
 '''
 
-ADD_HELP_TEXT = """
+ADMIN_HELP_TEXT = """
+/cookie - устанавливает авторизационную куку dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v"
+/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_capitan:123456"
+"""
+
+OTHER_HELP_TEXT = """
 /freq - частота рации. Для настройки канала напишите, например, "/freq 27"
 /pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard"
 Коды ищутся по регулярному выражению, изменяемому через настройку /pattern

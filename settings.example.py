@@ -1,5 +1,6 @@
 TOKEN = '123456:AAdscjdkslcjkdlsjvldjKFJLKJFLKDjkfdjsldsf'
 DATASET = 'postgresql://dr_bot@123@localhost:5432/dr_bot'
+DATASET_TEST = 'postgresql://dr_bot:123@localhost:5432/dr_bot_test'
 
 # ID чата, в который бот отправляет сообщения.
 # Используйте эту настройку только если хотите перенаправить сообщения бота в определенный чат.

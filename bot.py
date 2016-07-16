@@ -143,7 +143,7 @@ class ManulaBot(Bot):
 
             if False and 'принят' in take_message.lower() and 'код не принят' not in take_message.lower():
                 # Если код принят, то парсим движок на принятые коды.
-                parse_result = self.parser.parse()
+                parse_result = self.parser.parse(update_db=False)
                 metka_list = []
                 sector_list = parse_result['sector_list']
                 for sector in sector_list:
@@ -207,7 +207,7 @@ class ManulaBot(Bot):
         self.parser.fetch()
         parse_result = self.parser.parse()
         if parse_result['new_level']:
-            self.sendMessage(channel_id, 'Новый уровень.')
+            self.sendMessage(channel_id, 'Новый уровень')
         for tip in parse_result['tip_list']:
             self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))
 
@@ -215,6 +215,9 @@ class ManulaBot(Bot):
             for sector in self.parser.table_sector.all():
                 sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
                 self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
+
+        if parse_result['new_spoiler']:
+            self.sendMessage(channel_id, 'Открыт спойлер')
 
 
 if __name__ == '__main__':

@@ -1,11 +1,14 @@
 import os
 import unittest
 import codecs
+from unittest.mock import patch
 
+import settings
 from models import Parser
 
 
 class ParserTestCase(unittest.TestCase):
+    @patch('models.settings.DATASET', settings.DATASET_TEST)
     def setUp(self):
         self.parser = Parser()
 
@@ -83,3 +86,16 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(self.parser.table_tip.count(), 1)  # Должна появится первая подсказка
         tip = self.parser.table_tip.find_one()
         self.assertEqual(tip['text'], tip_text)
+
+    def test_parse_spoiler(self):
+        self.set_html('pages/spoiler_1.html')
+        result = self.parser.parse()
+        self.assertEqual(result['new_spoiler'], False)
+
+        self.set_html('pages/spoiler_1.html')
+        result = self.parser.parse()
+        self.assertEqual(result['new_spoiler'], False)
+
+        self.set_html('pages/spoiler_2.html')
+        result = self.parser.parse()
+        self.assertEqual(result['new_spoiler'], True)
