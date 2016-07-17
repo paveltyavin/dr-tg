@@ -142,7 +142,10 @@ class Parser(object):
                 self.table_tip.delete()
             result['new_level'] = True
 
-        sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
+        try:
+            sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
+        except IndexError:
+            return result
         sector_list_str = sector_list_str.split('<br></div>')[0]
         sector_list_str = sector_list_str.replace('null', 'N')
         for sector_index, sector_str in enumerate(sector_list_str.split('<br> ')):
