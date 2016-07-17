@@ -233,7 +233,11 @@ class Parser(object):
         if bot_data.get('spoiler'):
             return result
 
-        level_div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        try:
+            level_div = self.g.doc.select('//div[@class="zad"][1]')[0]
+        except IndexError:
+            return result
+
         level_html = level_div.html()
         if '<div class="title" style="padding-left:0">Спойлер</div>' in level_html:
             result['new_spoiler'] = True
