@@ -2,6 +2,7 @@ from telepot import Bot
 import settings
 import re
 import time
+from raven import Client
 
 from models import Parser, freq_dict, HELP_TEXT
 from views import sector_text, KoImg
@@ -18,6 +19,7 @@ class ManulaBot(Bot):
     freq = 28  # Частота рации
     parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
+    sentry = None
 
     routes = (
         (CORD_RE, 'on_cord'),
@@ -44,6 +46,8 @@ class ManulaBot(Bot):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.parser = Parser()
+        if hasattr(settings, 'SENTRY_DSN') and settings.SENTRY_DSN:
+            self.sentry = Client(settings.SENTRY_DSN)
 
         self.parser.table_bot.upsert({'token': settings.TOKEN}, ['token'])
         data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
@@ -186,7 +190,7 @@ class ManulaBot(Bot):
         else:
             self.sendMessage(chat_id, 'Проблемы с подключением к движку')
 
-    def on_chat_message(self, msg):
+    def _on_chat_message(self, msg):
         text = msg.get('text')
         if text is None:
             return
@@ -206,6 +210,13 @@ class ManulaBot(Bot):
 
         if self.type and 2 < len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
             self.on_code(chat_id, text.strip().lower())
+
+    def on_chat_message(self, msg):
+        try:
+            self._on_chat_message(msg)
+        except Exception as exc:
+            if self.sentry:
+                self.sentry.captureException(exc_info=True)
 
     def send_ko(self, channel_id):
         for sector in self.parser.table_sector.all():
