@@ -28,6 +28,8 @@ red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
 
 
 class Parser(object):
+    write_log_files = False
+
     def __init__(self):
         self.g = Grab()
         self.g.setup(timeout=100)
@@ -69,18 +71,20 @@ class Parser(object):
         """Загружает страницу движка"""
         self.g.go(drive_url)
         n = datetime.utcnow()
-        dir_1 = "./log/{}".format(n.strftime("%H"))
-        dir_2 = "{}/{}".format(dir_1, n.strftime("%H_%M"))
-        filepath = "{}/log_{}.html".format(dir_2, n.strftime("%H_%M_%S"))
-        if not os.path.exists('./log'):
-            os.makedirs('./log')
-        if not os.path.exists(dir_1):
-            os.makedirs(dir_1)
-        if not os.path.exists(dir_2):
-            os.makedirs(dir_2)
-        with codecs.open(filepath, mode='w+', encoding='utf-8') as f:
-            html = self.g.doc.body.decode('cp1251')
-            f.write(html)
+
+        if self.write_log_files:
+            dir_1 = "./log/{}".format(n.strftime("%H"))
+            dir_2 = "{}/{}".format(dir_1, n.strftime("%H_%M"))
+            filepath = "{}/log_{}.html".format(dir_2, n.strftime("%H_%M_%S"))
+            if not os.path.exists('./log'):
+                os.makedirs('./log')
+            if not os.path.exists(dir_1):
+                os.makedirs(dir_1)
+            if not os.path.exists(dir_2):
+                os.makedirs(dir_2)
+            with codecs.open(filepath, mode='w+', encoding='utf-8') as f:
+                html = self.g.doc.body.decode('cp1251')
+                f.write(html)
 
     @throttle(seconds=2)
     def take_code(self, code):
