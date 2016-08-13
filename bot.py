@@ -182,13 +182,15 @@ class ManulaBot(Bot):
             ))
 
     def on_status(self, chat_id, text):
+        message = ''
+
         self.parser.fetch()
         body = self.parser.g.doc.body.decode('cp1251')
-        connected = 'лог игры' in body.lower()
-        if connected:
-            self.sendMessage(chat_id, 'Движок подключен')
-        else:
-            self.sendMessage(chat_id, 'Проблемы с подключением к движку')
+        message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
+        message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
+        message += 'Режим ввода кодов {}'.format("включен" if self.type else "выключен")
+
+        self.sendMessage(chat_id, message)
 
     def _on_chat_message(self, msg):
         text = msg.get('text')
