@@ -153,7 +153,10 @@ class Parser(object):
         sector_list_str = sector_list_str.split('<br></div>')[0]
         sector_list_str = sector_list_str.replace('null', 'N')
         for sector_index, sector_str in enumerate(sector_list_str.split('<br>')):
-            sector_name, sector_code_str = sector_str.split(': ')
+            try:
+                sector_name, sector_code_str = sector_str.split(': ')
+            except ValueError:
+                continue
             sector = {
                 'id': sector_index + 1,
                 'name': sector_name,
