@@ -147,12 +147,12 @@ class Parser(object):
             result['new_level'] = True
 
         try:
-            sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br> ')[1]
+            sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br>')[1]
         except IndexError:
             return result
         sector_list_str = sector_list_str.split('<br></div>')[0]
         sector_list_str = sector_list_str.replace('null', 'N')
-        for sector_index, sector_str in enumerate(sector_list_str.split('<br> ')):
+        for sector_index, sector_str in enumerate(sector_list_str.split('<br>')):
             sector_name, sector_code_str = sector_str.split(': ')
             sector = {
                 'id': sector_index + 1,
