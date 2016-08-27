@@ -28,7 +28,7 @@ red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
 
 
 class Parser(object):
-    write_log_files = False
+    write_log_files = True
 
     def __init__(self):
         self.g = Grab()
