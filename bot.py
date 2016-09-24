@@ -113,7 +113,7 @@ class ManulaBot(Bot):
             data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
             pin = data.get('pin')
             if pin:
-                self.sendMessage(chat_id, "Пин для игры: {}".format(pin))
+                self.sendMessage(chat_id, "Пин есть: {}")
             else:
                 self.sendMessage(chat_id, "Пин отсутствует")
 
@@ -149,23 +149,16 @@ class ManulaBot(Bot):
 
         for code in code_list:
             if len(code) < 3:
-                return
-            take_message = self.parser.take_code(code)
-            if not take_message:
                 continue
-            message = "{} : {}".format(code, take_message)
 
-            if False and 'принят' in take_message.lower() and 'код не принят' not in take_message.lower():
-                # Если код принят, то парсим движок на принятые коды.
-                parse_result = self.parser.parse(update_db=False)
-                metka_list = []
-                sector_list = parse_result['sector_list']
-                for sector in sector_list:
-                    for code in sector['code_list']:
-                        metka_list.append(code['metka'])
-                if metka_list:
-                    message = "{} . Метка: {}".format(message, " или ".join(list(map(str, metka_list))))
-            self.sendMessage(chat_id, message)
+            self.parser.fetch(code)
+            parse_result = self.parser.parse()
+
+            server_message = parse_result.get('message', '').lower()
+            if server_message:
+                self.sendMessage(chat_id, "{} : {}".format(code, server_message))
+
+            self.parse_and_send(parse_result)
 
     def on_freq(self, chat_id, text):
         try:
@@ -214,11 +207,13 @@ class ManulaBot(Bot):
             self.on_code(chat_id, text.strip().lower())
 
     def on_chat_message(self, msg):
-        try:
-            self._on_chat_message(msg)
-        except Exception as exc:
-            if self.sentry:
+        if self.sentry:
+            try:
+                self._on_chat_message(msg)
+            except Exception as exc:
                 self.sentry.captureException(exc_info=True)
+        else:
+            self._on_chat_message(msg)
 
     def send_ko(self, channel_id):
         for sector in self.parser.table_sector.all():
@@ -234,12 +229,15 @@ class ManulaBot(Bot):
     def handle_loop(self):
         if not self.parse:
             return
-        channel_id = getattr(settings, 'CHANNEL_ID', None)
-        if channel_id is None:
-            return
 
         self.parser.fetch()
         parse_result = self.parser.parse()
+        self.parse_and_send(parse_result)
+
+    def parse_and_send(self, parse_result):
+        channel_id = getattr(settings, 'CHANNEL_ID', None)
+        if channel_id is None:
+            return
 
         if parse_result['new_level']:
             self.sendMessage(channel_id, 'Новый уровень')

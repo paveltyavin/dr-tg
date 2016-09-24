@@ -1,6 +1,7 @@
 from datetime import datetime
 import os
 import codecs
+from time import strptime
 from urllib.parse import urlencode, urljoin
 
 import dataset
@@ -67,10 +68,20 @@ class Parser(object):
     def set_pin(self, userpwd):
         self.g.setup(userpwd=userpwd)
 
-    def fetch(self):
+    @throttle(seconds=2)
+    def fetch(self, code=None):
         """Загружает страницу движка"""
-        self.g.go(drive_url)
         n = datetime.utcnow()
+
+        if code is None:
+            self.g.go(drive_url)
+        else:
+            code = code.lower()
+            code = code.replace('д', 'd')
+            code = code.replace('р', 'r')
+            if self.g.doc.select('.//*[@name="cod"]').exists():
+                self.g.doc.set_input('cod', code)
+                self.g.doc.submit()
 
         if self.write_log_files:
             dir_1 = "./log/{}".format(n.strftime("%H"))
@@ -86,31 +97,47 @@ class Parser(object):
                 html = self.g.doc.body.decode('cp1251')
                 f.write(html)
 
-    @throttle(seconds=2)
-    def take_code(self, code):
-        """Пробивка кода. Возвращает сообщение движка"""
-        code = code.lower()
-        code = code.replace('д', 'd')
-        code = code.replace('р', 'r')
-
-        self.g.go(drive_url)
-        if not self.g.doc.select('.//*[@name="cod"]').exists():
-            return ""
-
-        self.g.doc.set_input('cod', code)
-        self.g.doc.submit()
-
-        if not self.g.doc.select('//div[@class="sysmsg"]//b').exists():
-            return ""
-        message = self.g.doc.select('//div[@class="sysmsg"]//b').html()
-        message = message.replace('<b>', '').replace('</b>', '')
-        return message
-
     def parse(self, update_db=True):
         result = {}
         result.update(self._parse_level(update_db=update_db))
         result.update(self._parse_tip(update_db=update_db))
         result.update(self._parse_spoiler(update_db=update_db))
+        result.update(self._parse_message(update_db=update_db))
+        # result.update(self._parse_clock(update_db=update_db))
+        return result
+
+    def _parse_message(self, update_db=True):
+        if not self.g.doc.select('//div[@class="sysmsg"]//b').exists():
+            return {
+                'message': ''
+            }
+        message = self.g.doc.select('//div[@class="sysmsg"]//b').html()
+        message = message.replace('<b>', '').replace('</b>', '')
+        return {
+            'message': message
+        }
+
+    def _parse_clock(self, update_db=True):
+        result = {
+
+        }
+
+        bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
+        time = bot_data.get('time', 0)
+        if time < 1:
+            return result
+
+        try:
+            div = self.g.doc.select('//div[id="clock"][1]')[0]
+        except IndexError:
+            return result
+
+        clock_str = div.html()
+        clock = strptime('%H:%m', clock_str)
+
+        result = {
+            'clock': clock
+        }
         return result
 
     def _parse_level(self, update_db=True):
