@@ -73,13 +73,12 @@ class Parser(object):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
-        if code is None:
-            self.g.go(drive_url)
-        else:
+        self.g.go(drive_url)
+        if code is not None:
             code = code.lower()
             code = code.replace('д', 'd')
             code = code.replace('р', 'r')
-            if self.g.doc.select('.//*[@name="cod"]').exists():
+            if self.g.doc.select(b'.//*[@name="cod"]').exists():
                 self.g.doc.set_input('cod', code)
                 self.g.doc.submit()
 
