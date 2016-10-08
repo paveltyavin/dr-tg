@@ -4,7 +4,7 @@ from views import sector_text, KoImg
 
 class KoTextTestCase(unittest.TestCase):
     def test(self):
-        result = sector_text({
+        sector_text({
             'name': 'Основные коды',
             'code_list': [
                 {'ko': '1', 'taken': False},
@@ -23,9 +23,9 @@ class KoTextTestCase(unittest.TestCase):
                 {'ko': '1', 'taken': True},
             ]
         })
-        # print(result)
 
 
+@unittest.skip
 class KoImgTestCase(unittest.TestCase):
     def test(self):
         KoImg(['1', '2', '3'])

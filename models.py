@@ -237,6 +237,8 @@ class Parser(object):
             ):
                 if tip_title in div.html():
                     tip_node = div.node().getnext()
+                    for br in tip_node.xpath("*//br"):
+                        br.tail = "\n" + br.tail if br.tail else "\n"
                     tip_text = tip_node.text_content()
                     if 'не предусмотрена' in tip_text.lower():
                         continue
