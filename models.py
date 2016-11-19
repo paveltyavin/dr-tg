@@ -1,3 +1,4 @@
+import random
 from datetime import datetime
 import os
 import codecs
@@ -156,7 +157,10 @@ class Parser(object):
         sector_list_str = div.html()
         level_number_str = div.node().getprevious().text
         level_number_str = level_number_str.replace('Задание', '')
-        level = int(level_number_str.strip())
+        try:
+            level = int(level_number_str.strip())
+        except ValueError:
+            level = random.randint(100, 200)
 
         bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
 
