@@ -144,21 +144,23 @@ class ManulaBot(Bot):
         if len(cord_list) == 2:
             self.sendLocation(chat_id, *cord_list)
 
-    def on_code(self, chat_id, text):
+    def process_one_code(self, chat_id, code, convert_dr=True):
+        self.parser.fetch(code, convert_dr=convert_dr)
+        parse_result = self.parser.parse()
+
+        server_message = parse_result.get('message', '').lower()
+        if server_message:
+            self.sendMessage(chat_id, "{} : {}".format(code, server_message))
+
+        self.parse_and_send(parse_result)
+
+    def on_code(self, chat_id, text, convert_dr=True):
         code_list = re.findall(self.code_pattern, text, flags=re.I)
 
         for code in code_list:
             if len(code) < 3:
                 continue
-
-            self.parser.fetch(code)
-            parse_result = self.parser.parse()
-
-            server_message = parse_result.get('message', '').lower()
-            if server_message:
-                self.sendMessage(chat_id, "{} : {}".format(code, server_message))
-
-            self.parse_and_send(parse_result)
+            self.process_one_code(chat_id, code, convert_dr)
 
     def on_freq(self, chat_id, text):
         try:
@@ -205,6 +207,13 @@ class ManulaBot(Bot):
 
         if self.type and 2 < len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
             self.on_code(chat_id, text.strip().lower())
+
+        if text[:2] == '/ ':
+            self.process_one_code(
+                chat_id,
+                text.replace('/ ', '').strip().replace(' ', '').lower(),
+                convert_dr=False,
+            )
 
     def on_chat_message(self, msg):
         if self.sentry:

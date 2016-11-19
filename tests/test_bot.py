@@ -50,10 +50,18 @@ class BotTestCase(TestCase):
         Если код неверный, то бот должен послать об этом сообщение в чат
         """
         self.set_html('pages/code_1.html')
-        self.parser._parse_message = Mock(return_value={'message': 'к'
-                                                                   'од не принят'})
+        self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
         self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят')
+
+    def test_code_empty(self):
+        """
+        Нестандартный код пишется через слэш
+        """
+        self.set_html('pages/code_1.html')
+        self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/ НЕСТАНДАРТНЫЙКОД1'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят')
 
     def test_freq(self):
         """Тест сообщения на запрос частоты"""

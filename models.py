@@ -70,15 +70,16 @@ class Parser(object):
         self.g.setup(userpwd=userpwd)
 
     @throttle(seconds=2)
-    def fetch(self, code=None):
+    def fetch(self, code=None, convert_dr=True):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
         self.g.go(drive_url)
         if code is not None:
             code = code.lower()
-            code = code.replace('д', 'd')
-            code = code.replace('р', 'r')
+            if convert_dr:
+                code = code.replace('д', 'd')
+                code = code.replace('р', 'r')
             if self.g.doc.select(b'.//*[@name="cod"]').exists():
                 self.g.doc.set_input('cod', code)
                 self.g.doc.submit()
