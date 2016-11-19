@@ -145,6 +145,7 @@ class ManulaBot(Bot):
             self.sendLocation(chat_id, *cord_list)
 
     def process_one_code(self, chat_id, code, convert_dr=True):
+        convert_dr = False
         self.parser.fetch(code, convert_dr=convert_dr)
         parse_result = self.parser.parse()
 
