@@ -20,6 +20,7 @@ class ManulaBot(Bot):
     parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
     sentry = None
+    convert_dr = False
 
     routes = (
         (CORD_RE, 'on_cord'),
@@ -30,6 +31,7 @@ class ManulaBot(Bot):
         (r'^/help', 'on_help'),
         (r'^/type', 'on_type'),
         (r'^/parse', 'on_parse'),
+        (r'^/convert_dr', 'on_convert_dr'),
         (r'^/cookie', 'on_cookie'),
         (r'^/pin', 'on_pin'),
         (r'^/pattern', 'on_pattern'),
@@ -91,6 +93,13 @@ class ManulaBot(Bot):
             self.set_data('parse', False)
         self.sendMessage(chat_id, "Режим парсинга движка: {}".format("Включен" if self.parse else "Выключен"))
 
+    def on_convert_dr(self, chat_id, text):
+        if 'on' in text:
+            self.set_data('convert_dr', True)
+        elif 'off' in text:
+            self.set_data('convert_dr', False)
+        self.sendMessage(chat_id, "Режим изменения д->d, р->r: {}".format("Включен" if self.convert_dr else "Выключен"))
+
     def on_cookie(self, chat_id, text):
         for cookie in re.findall('(\w{24})', text):
             self.parser.set_cookie(cookie)
@@ -144,9 +153,8 @@ class ManulaBot(Bot):
         if len(cord_list) == 2:
             self.sendLocation(chat_id, *cord_list)
 
-    def process_one_code(self, chat_id, code, convert_dr=True):
-        convert_dr = False
-        self.parser.fetch(code, convert_dr=convert_dr)
+    def process_one_code(self, chat_id, code):
+        self.parser.fetch(code, convert_dr=self.convert_dr)
         parse_result = self.parser.parse()
 
         server_message = parse_result.get('message', '').lower()
@@ -155,13 +163,13 @@ class ManulaBot(Bot):
 
         self.parse_and_send(parse_result)
 
-    def on_code(self, chat_id, text, convert_dr=True):
+    def on_code(self, chat_id, text):
         code_list = re.findall(self.code_pattern, text, flags=re.I)
 
         for code in code_list:
             if len(code) < 3:
                 continue
-            self.process_one_code(chat_id, code, convert_dr)
+            self.process_one_code(chat_id, code)
 
     def on_freq(self, chat_id, text):
         try:
@@ -184,7 +192,8 @@ class ManulaBot(Bot):
         body = self.parser.g.doc.body.decode('cp1251')
         message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
         message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
-        message += 'Режим ввода кодов {}'.format("включен" if self.type else "выключен")
+        message += 'Режим ввода кодов {}\n'.format("включен" if self.type else "выключен")
+        message += 'Режим замены д->d р->r {}'.format("включен" if self.convert_dr else "выключен")
 
         self.sendMessage(chat_id, message)
 
@@ -209,11 +218,10 @@ class ManulaBot(Bot):
         if self.type and 2 < len(text) < 100 and re.search(self.code_pattern, text, flags=re.I):
             self.on_code(chat_id, text.strip().lower())
 
-        if text[:2] == '/ ':
+        if self.type and text[:2] == '/ ':
             self.process_one_code(
                 chat_id,
                 text.replace('/ ', '').strip().replace(' ', '').lower(),
-                convert_dr=False,
             )
 
     def on_chat_message(self, msg):
