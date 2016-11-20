@@ -77,11 +77,7 @@ class Parser(object):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
-        try:
-            self.g.go(drive_url)
-        except GrabTimeoutError:
-            return
-
+        self.g.go(drive_url)
         if code is not None:
             code = code.lower()
             if convert_dr:

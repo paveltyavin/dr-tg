@@ -1,3 +1,4 @@
+from grab.error import GrabTimeoutError
 from telepot import Bot
 import settings
 import re
@@ -154,7 +155,10 @@ class ManulaBot(Bot):
             self.sendLocation(chat_id, *cord_list)
 
     def process_one_code(self, chat_id, code):
-        self.parser.fetch(code, convert_dr=self.convert_dr)
+        try:
+            self.parser.fetch(code, convert_dr=self.convert_dr)
+        except GrabTimeoutError:
+            return
         parse_result = self.parser.parse()
 
         server_message = parse_result.get('message', '').lower()
@@ -188,7 +192,11 @@ class ManulaBot(Bot):
     def on_status(self, chat_id, text):
         message = ''
 
-        self.parser.fetch()
+        try:
+            self.parser.fetch()
+        except GrabTimeoutError:
+            self.sendMessage(chat_id, "Проблема подключения к движку")
+
         body = self.parser.g.doc.body.decode('cp1251')
         message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
         message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
@@ -247,8 +255,10 @@ class ManulaBot(Bot):
     def handle_loop(self):
         if not self.parse:
             return
-
-        self.parser.fetch()
+        try:
+            self.parser.fetch()
+        except GrabTimeoutError:
+            return
         parse_result = self.parser.parse()
         self.parse_and_send(parse_result)
 
