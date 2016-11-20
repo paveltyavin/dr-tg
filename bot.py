@@ -260,7 +260,10 @@ class ManulaBot(Bot):
         if parse_result['new_level']:
             self.sendMessage(channel_id, 'Новый уровень')
             self.send_ko(channel_id)
-            # self.send_ko_img(channel_id)
+
+            # Сбрасываем паттерн
+            self.code_pattern = STANDARD_CODE_PATTERN
+            self.set_data('code_pattern', STANDARD_CODE_PATTERN)
 
         for tip in parse_result['tip_list']:
             self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))

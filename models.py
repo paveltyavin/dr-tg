@@ -8,6 +8,9 @@ from urllib.parse import urlencode, urljoin
 import dataset
 from grab.base import Grab
 import re
+
+from grab.error import GrabTimeoutError
+
 import settings
 
 from decorators import throttle
@@ -74,7 +77,11 @@ class Parser(object):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
-        self.g.go(drive_url)
+        try:
+            self.g.go(drive_url)
+        except GrabTimeoutError:
+            return
+
         if code is not None:
             code = code.lower()
             if convert_dr:
