@@ -158,6 +158,7 @@ class ManulaBot(Bot):
         try:
             self.parser.fetch(code, convert_dr=self.convert_dr)
         except GrabTimeoutError:
+            self.sendMessage(chat_id, "Проблема подключения к движку")
             return
         parse_result = self.parser.parse()
 
@@ -196,6 +197,7 @@ class ManulaBot(Bot):
             self.parser.fetch()
         except GrabTimeoutError:
             self.sendMessage(chat_id, "Проблема подключения к движку")
+            return
 
         body = self.parser.g.doc.body.decode('cp1251')
         message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
