@@ -21,7 +21,7 @@ class ManulaBot(Bot):
     parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
     sentry = None
-    convert_dr = False
+    convert_dr = True
 
     routes = (
         (CORD_RE, 'on_cord'),
