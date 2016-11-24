@@ -16,14 +16,12 @@ class DzrBot(Bot):
     parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
     sentry = None
-    convert_dr = True
     code_pattern = None
     sleep_seconds = 30
 
     routes = (
         (CORD_RE, 'on_cord'),
         (r'^/auth', 'on_auth'),
-        (r'^/convert_dr', 'on_convert_dr'),
         (r'^/cookie', 'on_cookie'),
         (r'^/help', 'on_help'),
         (r'^/ko', 'on_ko'),
@@ -57,7 +55,6 @@ class DzrBot(Bot):
         for key in [
             'type',
             'parse',
-            'convert_dr',
             'sleep_seconds',
             'code_pattern',
         ]:
@@ -92,13 +89,6 @@ class DzrBot(Bot):
         elif 'off' in text:
             self.set_data('parse', False)
         self.sendMessage(chat_id, "Режим парсинга движка: {}".format("Включен" if self.parse else "Выключен"))
-
-    def on_convert_dr(self, chat_id, text, msg):
-        if 'on' in text:
-            self.set_data('convert_dr', True)
-        elif 'off' in text:
-            self.set_data('convert_dr', False)
-        self.sendMessage(chat_id, "Режим изменения д->d, р->r: {}".format("Включен" if self.convert_dr else "Выключен"))
 
     def on_cookie(self, chat_id, text, msg):
         for cookie in re.findall('(\w{24})', text):
@@ -228,7 +218,6 @@ class DzrBot(Bot):
         message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
         message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
         message += 'Режим ввода кодов {}\n'.format("включен" if self.type else "выключен")
-        message += 'Режим замены д->d р->r {}'.format("включен" if self.convert_dr else "выключен")
 
         self.sendMessage(chat_id, message, reply_to_message_id=msg['message_id'])
 
@@ -254,7 +243,7 @@ class DzrBot(Bot):
             code_pattern = self.code_pattern or STANDARD_CODE_PATTERN
             if re.search(code_pattern, text, flags=re.I):
                 # конвертируем кириллицу в латинницу, если настройка задана
-                if self.convert_dr:
+                if code_pattern == STANDARD_CODE_PATTERN:
                     text = text.replace('д', 'd').replace('р', 'r')
                 for code in re.findall(code_pattern, text, flags=re.I):
                     self.process_one_code(chat_id, code, msg.get('message_id'))
@@ -324,10 +313,9 @@ if __name__ == '__main__':
 
 HELP_TEXT = '''
 /status - общая информация о подключении к движку. Используйте ее, чтобы понять, авторизованы ли вы и установлен ли пин.
-Настройки /parse, /type, /convert_dr можно включать так: "/parse on" и выключать так: "/parse off".
+Настройки /parse, /type, можно включать так: "/parse on" и выключать так: "/parse off".
 /parse - парсинг движка дозора.
 /type - ввод кодов.
-/convert_dr - замена кириллических букв в коде д->d р->r.
 
 /pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard".
 /link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
