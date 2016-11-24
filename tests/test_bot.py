@@ -7,8 +7,8 @@ import settings
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from bot import DzrBot
-from parser import Parser, HELP_TEXT
+from bot import DzrBot, HELP_TEXT
+from parser import Parser
 from views import KoImg
 
 
@@ -24,6 +24,7 @@ class BotTestCase(TestCase):
         self.bot.parser = self.parser
         self.bot.parser.fetch = Mock()
         self.bot.parse = True
+        self.bot.code_pattern = None
         self.bot.sentry = None
 
     def tearDown(self):
@@ -41,8 +42,31 @@ class BotTestCase(TestCase):
             self.parser.g.setup_document(html_bytes)
 
     def test_help(self):
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/help'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/help'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', HELP_TEXT)
+
+    def test_code_pattern(self):
+        self.assertEqual(self.bot.code_pattern, None)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern ['})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода не установлен')
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern \w+\d{2}'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода установлен: \w+\d{2}')
+        self.bot.sendMessage.reset_mock()
+        self.assertEqual(self.bot.code_pattern, "\w+\d{2}")
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern standart'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Установлен стандартный шаблон кода')
+        self.bot.sendMessage.reset_mock()
+        self.assertEqual(self.bot.code_pattern, None)
+
+    def test_code_with_pattern(self):
+        self.set_html('pages/code_1.html')
+        self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
+        self.bot.code_pattern = "\w+\d{2}"
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': 'Бла бла бла песок98. Блаблабла', 'message_id': 321})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '00:49. песок98 : код не принят', reply_to_message_id=321)
 
     def test_code_fail(self):
         """
@@ -51,8 +75,8 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4', 'message_id': 321})
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят', reply_to_message_id=321)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': 'dr4', 'message_id': 321})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '00:49. dr4 : код не принят', reply_to_message_id=321)
 
     def test_code_empty(self):
         """
@@ -60,8 +84,8 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/ НЕСТАНДАРТНЫЙКОД1', 'message_id': 321})
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят', reply_to_message_id=321)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/ НЕСТАНДАРТНЫЙКОД1', 'message_id': 321})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '00:49. нестандартныйкод1 : код не принят', reply_to_message_id=321)
 
     def test_new_level(self):
         """Если наступает новый уровень, то бот должен послать об этом сообщение в канал"""
@@ -140,16 +164,64 @@ class BotTestCase(TestCase):
         )
 
     def test_type(self):
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
 
         self.bot.sendMessage.reset_mock()
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type off'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type off'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Выключен')
 
         self.bot.sendMessage.reset_mock()
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/type on'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type on'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
+
+    def test_clock(self):
+        self.set_html('pages/code_1.html')
+        result = self.parser.parse()
+        self.assertEqual(result['clock'], '00:49')
+
+    def test_auth(self):
+        """
+        аутентификация через команду /auth
+        """
+        self.assertEqual(True, True)
+
+    def test_pin(self):
+        """
+        аутентификация через pin
+        """
+        self.assertEqual(True, True)
+
+    def test_bool_params(self):
+        """
+        установка bool параметров
+        """
+        self.assertEqual(True, True)
+
+    def test_cookie(self):
+        """
+        аутентификация через команду /cookie
+        """
+        self.assertEqual(True, True)
+
+    def test_link(self):
+        """
+        хранение ссылки /link
+        """
+        self.assertEqual(True, True)
+
+    def test_sleep_seconds(self):
+        self.assertEqual(True, True)
+
+    def test_status(self):
+        self.assertEqual(True, True)
+
+    def test_connection_error(self):
+        # GrabTimeoutError
+        self.assertEqual(True, True)
+
+    def test_get_chat_id(self):
+        self.assertEqual(True, True)
 
 
 @skip
@@ -158,3 +230,8 @@ class BotImgTestCase(TestCase):
         self.bot = DzrBot(settings.TOKEN)
         ko_img = KoImg(ko_list=['1', '2', '3'])
         self.bot.sendPhoto(818051, ('ko.png', ko_img.content))
+
+
+class ThrottleTestCase(TestCase):
+    def test(self):
+        self.assertEqual(True, True)

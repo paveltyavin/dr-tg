@@ -84,16 +84,12 @@ class Parser(object):
         self.g.setup(userpwd=userpwd)
 
     @throttle(seconds=2)
-    def fetch(self, code=None, convert_dr=True):
+    def fetch(self, code=None):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
         self.g.go(drive_url)
         if code is not None:
-            code = code.lower()
-            if convert_dr:
-                code = code.replace('д', 'd')
-                code = code.replace('р', 'r')
             if self.g.doc.select(b'.//*[@name="cod"]').exists():
                 self.g.doc.set_input('cod', code)
                 self.g.doc.submit()
@@ -112,16 +108,16 @@ class Parser(object):
                 html = self.g.doc.body.decode('cp1251')
                 f.write(html)
 
-    def parse(self, update_db=True):
+    def parse(self):
         result = {}
-        result.update(self._parse_level(update_db=update_db))
-        result.update(self._parse_tip(update_db=update_db))
-        result.update(self._parse_spoiler(update_db=update_db))
-        result.update(self._parse_message(update_db=update_db))
-        # result.update(self._parse_clock(update_db=update_db))
+        result.update(self._parse_level())
+        result.update(self._parse_tip())
+        result.update(self._parse_spoiler())
+        result.update(self._parse_message())
+        result.update(self._parse_clock())
         return result
 
-    def _parse_message(self, update_db=True):
+    def _parse_message(self):
         if not self.g.doc.select('//div[@class="sysmsg"]//b').exists():
             return {
                 'message': ''
@@ -132,30 +128,23 @@ class Parser(object):
             'message': message
         }
 
-    def _parse_clock(self, update_db=True):
+    def _parse_clock(self):
         result = {
 
         }
-
-        bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
-        time = bot_data.get('time', 0)
-        if time < 1:
-            return result
-
         try:
-            div = self.g.doc.select('//div[id="clock"][1]')[0]
+            div = self.g.doc.select('//*[@id="clock"]')[0]
         except IndexError:
             return result
 
-        clock_str = div.html()
-        clock = strptime('%H:%m', clock_str)
+        clock_str = div.text()
 
         result = {
-            'clock': clock
+            'clock': clock_str
         }
         return result
 
-    def _parse_level(self, update_db=True):
+    def _parse_level(self):
         """
         Парсит страницу дозорного движка. Возвращает словарь с инфой об обновлении.
         Подробнее, что такое инфа обновления - в комментариях ниже
@@ -171,24 +160,20 @@ class Parser(object):
             return result
         sector_list_str = div.html()
         level_number_str = div.node().getprevious().text
-        level_number_str = level_number_str.replace('Задание', '')
-        try:
-            level = int(level_number_str.strip())
-        except ValueError:
-            level = random.randint(100, 200)
+        level_number_str = re.sub('\D', '', level_number_str)
+        level = int(level_number_str)
 
         bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
 
         if bot_data.get('level') != level:
-            if update_db:
-                self.table_bot.upsert({
-                    'token': settings.TOKEN,
-                    'level': level,
-                    'spoiler': False,
-                }, ['token'])
-                self.table_sector.delete()
-                self.table_code.delete()
-                self.table_tip.delete()
+            self.table_bot.upsert({
+                'token': settings.TOKEN,
+                'level': level,
+                'spoiler': False,
+            }, ['token'])
+            self.table_sector.delete()
+            self.table_code.delete()
+            self.table_tip.delete()
             result['new_level'] = True
 
         try:
@@ -222,24 +207,21 @@ class Parser(object):
                     'sector_id': sector_index + 1,
                 }
                 if old_code is None:
-                    if update_db:
-                        self.table_code.insert(filters)
+                    self.table_code.insert(filters)
                 elif old_code['taken'] != taken:
-                    if update_db:
-                        self.table_code.update(filters, ['sector_id', 'metka'])
+                    self.table_code.update(filters, ['sector_id', 'metka'])
                     if 'бонусные коды' not in sector['name']:
                         result['new_code'] = True
                     sector['code_list'].append(filters)
 
             result['sector_list'].append(sector)
-            if update_db:
-                self.table_sector.upsert({
-                    'id': sector_index + 1,
-                    'name': sector_name,
-                }, ['id'])
+            self.table_sector.upsert({
+                'id': sector_index + 1,
+                'name': sector_name,
+            }, ['id'])
         return result
 
-    def _parse_tip(self, update_db=True):
+    def _parse_tip(self):
         """
         Парсит текст подсказок. Возвращает объект обновления
         """
@@ -262,11 +244,10 @@ class Parser(object):
                     if 'не предусмотрена' in tip_text.lower():
                         continue
                     old_tip = self.table_tip.find_one(index=tip_index)
-                    if update_db:
-                        self.table_tip.upsert({
-                            'text': tip_text,
-                            'index': tip_index,  # номер подсказки
-                        }, ['index'])
+                    self.table_tip.upsert({
+                        'text': tip_text,
+                        'index': tip_index,  # номер подсказки
+                    }, ['index'])
                     if old_tip is None:
                         result['tip_list'].append({
                             'text': tip_text,
@@ -274,7 +255,7 @@ class Parser(object):
                         })
         return result
 
-    def _parse_spoiler(self, update_db=True):
+    def _parse_spoiler(self):
         """
         Парсит текст спойлера. Возвращает объект обновления
         """
@@ -295,33 +276,9 @@ class Parser(object):
         level_html = level_div.html()
         if '<div class="title" style="padding-left:0">Спойлер</div>' in level_html:
             result['new_spoiler'] = True
-            if update_db:
-                self.table_bot.upsert({
-                    'token': settings.TOKEN,
-                    'spoiler': True,
-                }, ['token'])
+            self.table_bot.upsert({
+                'token': settings.TOKEN,
+                'spoiler': True,
+            }, ['token'])
 
         return result
-
-
-HELP_TEXT = '''
-/status - общая информация о подключении к движку. Используйте ее, чтобы понять, авторизованы ли вы и установлен ли пин.
-Настройки /parse, /type, /convert_dr можно включать так: "/parse on" и выключать так: "/parse off".
-/parse - парсинг движок дозора.
-/type - ввод кодов.
-/convert_dr - замена кириллических букв в коде д->d р->r.
-
-/pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard". Например, если коды на уровне представляют собой слово и две цифры ( код34 , слово 68 ) , то можно задать такую регулярку: "/pattern \w+\d{2}"
-Коды ищутся по регулярному выражению, изменяемому через настройку /pattern
-/link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
-/ko - прислать актуальную табличку с КО в чат.
-/ код - послать в движок код без проверки на паттерн (см. выше, /pattern). Нужно, если вы не хотите заниматься настройкой паттерна, и вам просто нужно пробить произвольный код.
-'''
-
-ADMIN_HELP_TEXT = '''
-/auth - авторизация через логин пароль. Использовать так: "/auth login parol". Используйте этот метод авторизации, если у вас есть отдельный аккаунта для бота.
-/cookie - установка авторизационной куки dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v". Используйте этот метод авторизации, если у вас нет отдельного аккаунта для бота и вы используйте один аккаунт как для бота, так и в браузере.
-/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_captain:123456", где moscow_captain и 123456 - данные, выдаваемые организаторами.
-'''
-
-HELP_TEXT += ADMIN_HELP_TEXT

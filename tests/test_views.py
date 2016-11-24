@@ -23,9 +23,3 @@ class KoTextTestCase(unittest.TestCase):
                 {'ko': '1', 'taken': True},
             ]
         })
-
-
-@unittest.skip
-class KoImgTestCase(unittest.TestCase):
-    def test(self):
-        KoImg(['1', '2', '3'])
