@@ -7,18 +7,18 @@ import settings
 from unittest import TestCase
 from unittest.mock import Mock, patch
 
-from bot import ManulaBot
-from models import Parser, HELP_TEXT
+from bot import DzrBot
+from parser import Parser, HELP_TEXT
 from views import KoImg
 
 
 class BotTestCase(TestCase):
-    @patch('models.settings.DATASET', settings.DATASET_TEST)
+    @patch('parser.settings.DATASET', settings.DATASET_TEST)
     def setUp(self):
         self.parser = Parser()
         settings.CHAT_ID = 'CHAT_ID'
         settings.CHANNEL_ID = 'CHANNEL_ID'
-        self.bot = ManulaBot(None)
+        self.bot = DzrBot(None)
         self.bot.type = True
         self.bot.sendMessage = Mock()
         self.bot.parser = self.parser
@@ -51,8 +51,8 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4'})
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят')
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': 'dr4', 'message_id': 321})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят', reply_to_message_id=321)
 
     def test_code_empty(self):
         """
@@ -60,13 +60,8 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/ НЕСТАНДАРТНЫЙКОД1'})
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят')
-
-    def test_freq(self):
-        """Тест сообщения на запрос частоты"""
-        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/freq'})
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Основная частота: 433.775 ||| Канал Midland: 28')
+        self.bot.on_chat_message({'chat': {'id': None}, 'text': '/ НЕСТАНДАРТНЫЙКОД1', 'message_id': 321})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят', reply_to_message_id=321)
 
     def test_new_level(self):
         """Если наступает новый уровень, то бот должен послать об этом сообщение в канал"""
@@ -160,6 +155,6 @@ class BotTestCase(TestCase):
 @skip
 class BotImgTestCase(TestCase):
     def test_ko_img(self):
-        self.bot = ManulaBot(settings.TOKEN)
+        self.bot = DzrBot(settings.TOKEN)
         ko_img = KoImg(ko_list=['1', '2', '3'])
         self.bot.sendPhoto(818051, ('ko.png', ko_img.content))

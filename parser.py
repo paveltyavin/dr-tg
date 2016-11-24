@@ -9,8 +9,6 @@ import dataset
 from grab.base import Grab
 import re
 
-from grab.error import GrabTimeoutError
-
 import settings
 
 from decorators import throttle
@@ -68,6 +66,19 @@ class Parser(object):
             domain='.dzzzr.ru',
             path='/',
         )
+
+    def auth(self, login='', password=''):
+        """Авторизация на сайте дозора"""
+        self.table_cookies.delete()
+
+        self.g.go(start_url)
+        self.g.doc.set_input('login', login)
+        self.g.doc.set_input('password', password)
+        self.g.doc.submit()
+        cookie_list = self.g.cookies.get_dict()
+
+        for cookie_dict in cookie_list:
+            self.table_cookies.insert(cookie_dict)
 
     def set_pin(self, userpwd):
         self.g.setup(userpwd=userpwd)
@@ -293,23 +304,24 @@ class Parser(object):
         return result
 
 
-freq_dict = {x: "{:.3f}".format(433.075 + x * 0.025) for x in range(1, 70)}
-
 HELP_TEXT = '''
-/parse - парсить ли движок дозора. Можно отключить так: "/parse off" или включить "/parse on".
-/status - проверка статуса подключения к движку.
-/type - актуальная настройка "ввода кодов". Можно отключить так: "/type off" или включить "/type on".
-/convert_dr - актуальная настройка "изменения кода д->d р->r". Можно отключить так: "/convert_dr off" или включить "/convert_dr on".
+/status - общая информация о подключении к движку. Используйте ее, чтобы понять, авторизованы ли вы и установлен ли пин.
+Настройки /parse, /type, /convert_dr можно включать так: "/parse on" и выключать так: "/parse off".
+/parse - парсинг движок дозора.
+/type - ввод кодов.
+/convert_dr - замена кириллических букв в коде д->d р->r.
+
+/pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard". Например, если коды на уровне представляют собой слово и две цифры ( код34 , слово 68 ) , то можно задать такую регулярку: "/pattern \w+\d{2}"
+Коды ищутся по регулярному выражению, изменяемому через настройку /pattern
+/link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
+/ko - прислать актуальную табличку с КО в чат.
+/ код - послать в движок код без проверки на паттерн (см. выше, /pattern). Нужно, если вы не хотите заниматься настройкой паттерна, и вам просто нужно пробить произвольный код.
 '''
 
-ADMIN_HELP_TEXT = """
-/cookie - устанавливает авторизационную куку dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v"
-/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_capitan:123456"
-"""
+ADMIN_HELP_TEXT = '''
+/auth - авторизация через логин пароль. Использовать так: "/auth login parol". Используйте этот метод авторизации, если у вас есть отдельный аккаунта для бота.
+/cookie - установка авторизационной куки dozorSiteSession. Использовать так: "/cookie KTerByfGopF5dSgFjkl07x8v". Используйте этот метод авторизации, если у вас нет отдельного аккаунта для бота и вы используйте один аккаунт как для бота, так и в браузере.
+/pin - устанавливает пин для доступа в игру. Использовать так: "/pin moscow_captain:123456", где moscow_captain и 123456 - данные, выдаваемые организаторами.
+'''
 
-OTHER_HELP_TEXT = """
-/freq - частота рации. Для настройки канала напишите, например, "/freq 27"
-/pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard"
-Коды ищутся по регулярному выражению, изменяемому через настройку /pattern
-/link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>"
-"""
+HELP_TEXT += ADMIN_HELP_TEXT

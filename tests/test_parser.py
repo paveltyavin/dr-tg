@@ -5,11 +5,11 @@ from unittest.case import skip
 from unittest.mock import patch
 
 import settings
-from models import Parser
+from parser import Parser
 
 
 class ParserTestCase(unittest.TestCase):
-    @patch('models.settings.DATASET', settings.DATASET_TEST)
+    @patch('parser.settings.DATASET', settings.DATASET_TEST)
     def setUp(self):
         self.parser = Parser()
 
