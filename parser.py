@@ -1,8 +1,6 @@
-import random
 from datetime import datetime
 import os
 import codecs
-from time import strptime
 from urllib.parse import urlencode, urljoin
 
 import dataset

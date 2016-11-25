@@ -80,12 +80,3 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/spoiler_2.html')
         result = self.parser.parse()
         self.assertEqual(result['new_spoiler'], True)
-
-    def test_set_cookie(self):
-        self.assertEqual(True, True)
-
-    def test_set_pin(self):
-        self.assertEqual(True, True)
-
-    def test_message(self):
-        self.assertEqual(True, True)

@@ -9,6 +9,7 @@ from unittest import TestCase
 from unittest.mock import Mock, patch
 
 from bot import DzrBot, HELP_TEXT
+from decorators import throttle
 from parser import Parser
 
 
@@ -330,5 +331,13 @@ class BotTestCase(TestCase):
 
 
 class ThrottleTestCase(TestCase):
-    def test(self):
-        self.assertEqual(True, True)
+    @throttle(seconds=2)
+    def f(self):
+        return
+
+    @patch('decorators.sleep')
+    def test(self, sleep_mock):
+        self.f()
+        self.f()
+        self.assertEqual(sleep_mock.called, True)
+        sleep_mock.assert_any_call(1)

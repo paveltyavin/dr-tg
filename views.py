@@ -80,6 +80,7 @@ class KoImg(object):
             y = self.cell_height * (i % self.row_count) + int((1 - self.font_frac) * 0.5 * self.cell_height)
 
             code_color = self.code_color
+            # Раскрашиваем трешки в красный цвет
             if '3' in ko:
                 r = int(self.font_size * 1.3)
                 frx = 0.26
