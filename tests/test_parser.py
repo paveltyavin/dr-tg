@@ -1,7 +1,7 @@
 import os
 import unittest
 import codecs
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 import settings
 from parser import Parser

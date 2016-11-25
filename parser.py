@@ -67,7 +67,7 @@ class Parser(object):
             path='/',
         )
 
-    def auth(self, login='', password=''):
+    def auth(self, login, password):
         """Авторизация на сайте дозора"""
         self.table_cookies.delete()
 
@@ -233,7 +233,7 @@ class Parser(object):
 
         for div in div_list:
             for tip_title, tip_index in (
-                ('Подсказка l:', 1),
+                ('Подсказка l:', 1),  # здесь нет опечатки, в дозором движке используется именно латинская буква l вместо цифры 1.
                 ('Подсказка 2:', 2),
             ):
                 if tip_title in div.html():

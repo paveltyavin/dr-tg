@@ -92,6 +92,7 @@ class DzrBot(Bot):
 
     def on_cookie(self, chat_id, text, msg):
         for cookie in re.findall('(\w{24})', text):
+            cookie = cookie.upper()
             self.parser.set_cookie(cookie)
             self.set_data('cookie', cookie)
             self.sendMessage(chat_id, "Кука установлена")
@@ -109,9 +110,10 @@ class DzrBot(Bot):
                 )
             )
         except ValueError:
+            self.sendMessage(chat_id, 'Ошибка в параметрах аутентификации')
             return
         self.parser.auth(login, password)
-        self.sendMessage(chat_id, 'Авторизация установлена. Логин = {}'.format(login))
+        self.sendMessage(chat_id, 'Аутентификация установлена. Логин = {}'.format(login))
 
     def on_ko(self, chat_id, text, msg):
         self.send_ko(chat_id)
@@ -129,7 +131,7 @@ class DzrBot(Bot):
             data = self.get_data()
             pin = data.get('pin')
             if pin:
-                self.sendMessage(chat_id, "Пин есть: {}")
+                self.sendMessage(chat_id, "Пин есть: {}".format(pin))
             else:
                 self.sendMessage(chat_id, "Пин отсутствует")
 
@@ -148,7 +150,10 @@ class DzrBot(Bot):
             self.set_data('code_pattern', text)
             self.sendMessage(chat_id, "Шаблон кода установлен: {}".format(text))
         else:
-            self.sendMessage(chat_id, "Шаблон кода: {}".format(self.code_pattern))
+            if self.code_pattern:
+                self.sendMessage(chat_id, "Шаблон кода: {}".format(self.code_pattern))
+            else:
+                self.sendMessage(chat_id, "Шаблон кода: стандартный")
 
     def on_link(self, chat_id, text, msg):
         data = self.get_data()
@@ -222,7 +227,7 @@ class DzrBot(Bot):
         self.sendMessage(chat_id, message)
 
     def _on_chat_message(self, msg):
-        text = msg.get('text', '').lower()
+        text = msg.get('text')
         # Не отвечает на нетекстовые сообщения
         if text is None:
             return
@@ -240,6 +245,7 @@ class DzrBot(Bot):
 
         # парсинг сообщения на наличие кодов.
         if self.type and 2 < len(text) < 100:
+            text = text.lower()
             code_pattern = self.code_pattern or STANDARD_CODE_PATTERN
             if re.search(code_pattern, text, flags=re.I):
                 # конвертируем кириллицу в латинницу, если настройка задана

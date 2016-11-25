@@ -1,6 +1,5 @@
 import os
 import codecs
-from unittest.case import skip
 
 from grab.error import GrabTimeoutError
 
@@ -11,21 +10,25 @@ from unittest.mock import Mock, patch
 
 from bot import DzrBot, HELP_TEXT
 from parser import Parser
-from views import KoImg
 
 
 class BotTestCase(TestCase):
     @patch('parser.settings.DATASET', settings.DATASET_TEST)
     def setUp(self):
         self.parser = Parser()
+
         settings.CHAT_ID = 'CHAT_ID'
         settings.CHANNEL_ID = 'CHANNEL_ID'
         self.bot = DzrBot(None)
         self.bot.type = True
         self.bot.sendMessage = Mock()
         self.bot.sendLocation = Mock()
+        self.bot.sendPhoto = Mock()
+
         self.bot.parser = self.parser
         self.bot.parser.fetch = Mock()
+        self.bot.parser.auth = Mock()
+
         self.bot.parse = True
         self.bot.code_pattern = None
         self.bot.sentry = None
@@ -59,10 +62,18 @@ class BotTestCase(TestCase):
         self.bot.sendMessage.reset_mock()
         self.assertEqual(self.bot.code_pattern, "\w+\d{2}")
 
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода: \w+\d{2}')
+        self.bot.sendMessage.reset_mock()
+
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern standart'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Установлен стандартный шаблон кода')
         self.bot.sendMessage.reset_mock()
         self.assertEqual(self.bot.code_pattern, None)
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода: стандартный')
+        self.bot.sendMessage.reset_mock()
 
     def test_code_with_pattern(self):
         self.set_html('pages/code_1.html')
@@ -187,25 +198,62 @@ class BotTestCase(TestCase):
         """
         аутентификация через команду /auth
         """
-        self.assertEqual(True, True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/auth login parol'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Аутентификация установлена. Логин = login")
+        self.assertEqual(self.bot.parser.auth.called, True)
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/auth login'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Ошибка в параметрах аутентификации")
+        self.bot.sendMessage.reset_mock()
+
+    def test_test_error(self):
+        with self.assertRaises(Exception):
+            self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/test_error'})
 
     def test_pin(self):
         """
         аутентификация через pin
         """
-        self.assertEqual(True, True)
+        self.bot.set_data('pin', '')
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин отсутствует")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin moscow_cap:123456'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин установлен")
+        self.bot.sendMessage.reset_mock()
+        self.assertEqual(self.bot.get_data().get('pin'), "moscow_cap:123456")
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин есть: moscow_cap:123456")
+        self.bot.sendMessage.reset_mock()
 
     def test_bool_params(self):
         """
         установка bool параметров
         """
-        self.assertEqual(True, True)
+
+        self.bot.set_data('parse', False)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/parse on'})
+        self.assertEqual(self.bot.get_data().get('parse'), True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/parse off'})
+        self.assertEqual(self.bot.get_data().get('parse'), False)
+
+        self.bot.set_data('type', False)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type on'})
+        self.assertEqual(self.bot.get_data().get('type'), True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type off'})
+        self.assertEqual(self.bot.get_data().get('type'), False)
 
     def test_cookie(self):
         """
         аутентификация через команду /cookie
         """
-        self.assertEqual(True, True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/cookie KTerByfGopF5dSgFjkl07x8v'})
+        self.assertEqual(self.bot.get_data().get('cookie'), "KTERBYFGOPF5DSGFJKL07X8V")
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Кука установлена")
 
     def test_link(self):
         """
@@ -231,9 +279,17 @@ class BotTestCase(TestCase):
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 10")
         self.bot.sendMessage.reset_mock()
 
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "sleep_seconds = 10")
+        self.bot.sendMessage.reset_mock()
+
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 20'})
         self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 20")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds к'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Ошибка в установке")
         self.bot.sendMessage.reset_mock()
 
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 5'})
@@ -260,13 +316,17 @@ class BotTestCase(TestCase):
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '55.370 37.550'})
         self.bot.sendLocation.assert_any_call('CHAT_ID', '55.370', '37.550')
 
+    def test_ko(self):
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/ko'})
+        self.assertTrue(True)
 
-@skip
-class BotImgTestCase(TestCase):
-    def test_ko_img(self):
-        self.bot = DzrBot(settings.TOKEN)
-        ko_img = KoImg(ko_list=['1', '2', '3'])
-        self.bot.sendPhoto(818051, ('ko.png', ko_img.content))
+    def test_img(self):
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/img'})
+        self.assertEqual(self.bot.sendPhoto.called, True)
 
 
 class ThrottleTestCase(TestCase):
