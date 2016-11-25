@@ -8,7 +8,7 @@ from raven import Client
 from parser import Parser
 from views import sector_text, KoImg
 
-CORD_RE = '([35]\d[\.,]\d+)'
+CORD_RE = '(\d{2}[\.,]\d{3,})'
 STANDARD_CODE_PATTERN = '\d*[dr]\d*[dr]\d*'
 
 
@@ -126,7 +126,7 @@ class DzrBot(Bot):
             self.set_data('pin', text)
             self.sendMessage(chat_id, "Пин установлен")
         else:
-            data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
+            data = self.get_data()
             pin = data.get('pin')
             if pin:
                 self.sendMessage(chat_id, "Пин есть: {}")
@@ -151,7 +151,7 @@ class DzrBot(Bot):
             self.sendMessage(chat_id, "Шаблон кода: {}".format(self.code_pattern))
 
     def on_link(self, chat_id, text, msg):
-        data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
+        data = self.get_data()
         text = text.replace('/link', '').strip()
         if text:
             self.set_data('link', text)
@@ -164,7 +164,7 @@ class DzrBot(Bot):
                 self.sendMessage(chat_id, "Настройки ссылки не найдено")
 
     def on_sleep_seconds(self, chat_id, text, msg):
-        data = self.parser.table_bot.find_one(**{'token': settings.TOKEN})
+        data = self.get_data()
         text = text.replace('/sleep_seconds', '').strip()
         if text:
             text = re.sub('\D', '', text)
@@ -173,7 +173,7 @@ class DzrBot(Bot):
             except (ValueError, TypeError):
                 self.sendMessage(chat_id, "Ошибка в установке")
                 return
-            if not 10 < result < 300:
+            if not 10 <= result <= 300:
                 self.sendMessage(chat_id, "Время sleep_seconds должно быть в итервале от 10 до 300 секунд. Если вы хотите выключить парсинг движка, воспользуйтесь командой /parse off")
             else:
                 self.set_data('sleep_seconds', result)
@@ -219,7 +219,7 @@ class DzrBot(Bot):
         message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
         message += 'Режим ввода кодов {}\n'.format("включен" if self.type else "выключен")
 
-        self.sendMessage(chat_id, message, reply_to_message_id=msg['message_id'])
+        self.sendMessage(chat_id, message)
 
     def _on_chat_message(self, msg):
         text = msg.get('text', '').lower()
@@ -271,6 +271,9 @@ class DzrBot(Bot):
             ko_list = [x['ko'] for x in self.parser.table_code.find(sector_id=sector['id'])]
             ko_img = KoImg(ko_list=ko_list)
             self.sendPhoto(channel_id, ('ko.png', ko_img.content))
+
+    def get_data(self):
+        return self.parser.table_bot.find_one(**{'token': settings.TOKEN})
 
     def handle_loop(self):
         if not self.parse:

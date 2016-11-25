@@ -1,7 +1,6 @@
 import os
 import unittest
 import codecs
-from unittest.case import skip
 from unittest.mock import patch
 
 import settings

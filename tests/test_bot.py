@@ -2,6 +2,8 @@ import os
 import codecs
 from unittest.case import skip
 
+from grab.error import GrabTimeoutError
+
 import settings
 
 from unittest import TestCase
@@ -21,6 +23,7 @@ class BotTestCase(TestCase):
         self.bot = DzrBot(None)
         self.bot.type = True
         self.bot.sendMessage = Mock()
+        self.bot.sendLocation = Mock()
         self.bot.parser = self.parser
         self.bot.parser.fetch = Mock()
         self.bot.parse = True
@@ -208,20 +211,54 @@ class BotTestCase(TestCase):
         """
         хранение ссылки /link
         """
-        self.assertEqual(True, True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link link1'})
+        self.assertEqual(self.bot.get_data().get('link'), "link1")
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена ссылка link1")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link link2'})
+        self.assertEqual(self.bot.get_data().get('link'), "link2")
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена ссылка link2")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Ссылка: link2")
+        self.bot.sendMessage.reset_mock()
 
     def test_sleep_seconds(self):
-        self.assertEqual(True, True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 10'})
+        self.assertEqual(self.bot.get_data().get('sleep_seconds'), 10)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 10")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 20'})
+        self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 20")
+        self.bot.sendMessage.reset_mock()
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 5'})
+        self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Время sleep_seconds должно быть в итервале от 10 до 300 секунд. Если вы хотите выключить парсинг движка, воспользуйтесь командой /parse off")
+        self.bot.sendMessage.reset_mock()
 
     def test_status(self):
-        self.assertEqual(True, True)
+        self.set_html('pages/code_1.html')
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/status'})
+        self.assertTrue(self.bot.parser.fetch.called)
 
     def test_connection_error(self):
-        # GrabTimeoutError
-        self.assertEqual(True, True)
+        self.set_html('pages/code_1.html')
+        self.bot.parser.fetch = Mock(side_effect=GrabTimeoutError)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/status'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', "Проблема подключения к движку")
 
     def test_get_chat_id(self):
-        self.assertEqual(True, True)
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/get_chat_id'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'chat id: CHAT_ID')
+
+    def test_cord(self):
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '55.370 37.550'})
+        self.bot.sendLocation.assert_any_call('CHAT_ID', '55.370', '37.550')
 
 
 @skip
