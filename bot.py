@@ -341,7 +341,6 @@ def __main__():
     for key in (
         'TOKEN',
         'DATASET',
-        'CHANNEL_ID',
     ):
         if not hasattr(settings, key):
             print('Заполните параметр {} в файле settings'.format(key))
