@@ -133,8 +133,11 @@ class DzrBot(Bot):
         except ValueError:
             self.sendMessage(chat_id, 'Ошибка в параметрах аутентификации')
             return
-        self.parser.auth(login, password)
-        self.sendMessage(chat_id, 'Аутентификация установлена. Логин = {}'.format(login))
+        result = self.parser.auth(login, password)
+        if result:
+            self.sendMessage(chat_id, 'Аутентификация установлена. Логин = {}'.format(login))
+        else:
+            self.sendMessage(chat_id, 'Ошибка аутентификации')
 
     def on_ko(self, chat_id, text, msg):
         self.send_ko(chat_id)
@@ -250,7 +253,7 @@ class DzrBot(Bot):
     def _on_chat_message(self, msg):
         text = msg.get('text')
         # Не отвечает на нетекстовые сообщения
-        if text is None:
+        if not text:
             return
 
         chat_id = msg['chat']['id']
@@ -262,14 +265,14 @@ class DzrBot(Bot):
         for pattern, method_str in self.routes:
             method = getattr(self, method_str, None)
             if method is not None and re.search(pattern, text):
-                method(chat_id, text, msg=msg)
+                method(chat_id, text, msg)
 
         # парсинг сообщения на наличие кодов.
         if self.type and 2 < len(text) < 100:
             text = text.lower()
             code_pattern = self.code_pattern or STANDARD_CODE_PATTERN
             if re.search(code_pattern, text, flags=re.I):
-                # конвертируем кириллицу в латинницу, если настройка задана
+                # конвертируем кириллицу в латинницу, если шаблон стандартный
                 if code_pattern == STANDARD_CODE_PATTERN:
                     text = text.replace('д', 'd').replace('р', 'r')
                 for code in re.findall(code_pattern, text, flags=re.I):
@@ -334,9 +337,20 @@ class DzrBot(Bot):
             self.sendMessage(channel_id, 'Открыт спойлер')
 
 
-if __name__ == '__main__':
+def __main__():
+    for key in (
+        'TOKEN',
+        'DATASET',
+        'CHANNEL_ID',
+    ):
+        if not hasattr(settings, key):
+            print('Заполните параметр {} в файле settings'.format(key))
+            return
     bot = DzrBot(settings.TOKEN)
     bot.message_loop()
     while 1:
         bot.handle_loop()
         time.sleep(bot.sleep_seconds)
+
+if __name__ == '__main__':
+    __main__()

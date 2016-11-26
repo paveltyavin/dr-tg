@@ -42,8 +42,7 @@ class Parser(object):
         self.table_cookies = self.db['cookies']
         self.table_bot = self.db['bot']
 
-        current_bot = self.table_bot.find_one(**{'token': settings.TOKEN})
-        if current_bot is None:
+        if self.table_bot.find_one(**{'token': settings.TOKEN}) is None:
             self.table_bot.insert({
                 'token': settings.TOKEN,
                 'level': None,
@@ -73,10 +72,14 @@ class Parser(object):
         self.g.doc.set_input('login', login)
         self.g.doc.set_input('password', password)
         self.g.doc.submit()
+        html = self.g.doc.body.decode('cp1251')
+        if 'Ошибка авторизации' in html:
+            return False
         cookie_list = self.g.cookies.get_dict()
 
         for cookie_dict in cookie_list:
             self.table_cookies.insert(cookie_dict)
+        return True
 
     def set_pin(self, userpwd):
         self.g.setup(userpwd=userpwd)
