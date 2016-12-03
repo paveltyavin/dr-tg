@@ -1,4 +1,5 @@
 from datetime import datetime
+import time
 import os
 import codecs
 from urllib.parse import urlencode, urljoin
@@ -130,20 +131,19 @@ class Parser(object):
         }
 
     def _parse_clock(self):
-        result = {
-
-        }
-        try:
-            div = self.g.doc.select('//*[@id="clock"]')[0]
-        except IndexError:
-            return result
-
-        clock_str = div.text()
-
-        result = {
-            'clock': clock_str
-        }
-        return result
+        for script_el in self.g.doc.select('//table//tr//td//script'):
+            for seconds in re.findall('setTimeout\(\'countDown\((\d+)\)\',', script_el.html(), flags=re.I):
+                try:
+                    seconds = int(seconds)
+                except TypeError:
+                    continue
+                t = time.gmtime(seconds)
+                time_pattern = "%H:%M:%S" if seconds > 60*60 else "%M:%S"
+                result = {
+                    'clock': time.strftime(time_pattern, t)
+                }
+                return result
+        return {}
 
     def _parse_level(self):
         """

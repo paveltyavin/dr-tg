@@ -270,17 +270,23 @@ class DzrBot(Bot):
         # парсинг сообщения на наличие кодов.
         if self.type and 2 < len(text) < 100:
             text = text.lower()
-            code_pattern = self.code_pattern or STANDARD_CODE_PATTERN
-            if code_pattern == STANDARD_CODE_PATTERN:
-                text = text.replace('д', 'd').replace('р', 'r')
-            if re.search(code_pattern, text, flags=re.I):
-                # конвертируем кириллицу в латинницу, если шаблон стандартный
-                for code in re.findall(code_pattern, text, flags=re.I):
-                    self.process_one_code(chat_id, code, msg.get('message_id'))
-
             if text[:2] == '/ ':
                 text = text.replace('/ ', '')
                 self.process_one_code(chat_id, text, msg.get('message_id'))
+                return
+
+            if self.code_pattern is None:
+                code_pattern = STANDARD_CODE_PATTERN
+                # конвертируем кириллицу в латинницу, если шаблон стандартный
+                text = text.replace('д', 'd').replace('р', 'r')
+            else:
+                code_pattern = self.code_pattern
+
+            if re.search(code_pattern, text, flags=re.I):
+                for code in re.findall(code_pattern, text, flags=re.I):
+                    if code_pattern == STANDARD_CODE_PATTERN and not('d' in code and 'r' in code):
+                        continue
+                    self.process_one_code(chat_id, code, msg.get('message_id'))
 
     def on_chat_message(self, msg):
         if self.sentry:
