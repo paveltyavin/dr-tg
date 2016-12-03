@@ -226,10 +226,10 @@ class DzrBot(Bot):
 
         server_message = parse_result.get('message', '').lower()
         if server_message:
-            self.sendMessage(chat_id, "{}{} : {}".format(
-                "{}. ".format(clock) if clock else '',
-                code,
-                server_message,
+            self.sendMessage(chat_id, "{code} : {server_message}{clock}".format(
+                clock=". Таймер: {}".format(clock) if clock else '',
+                code=code,
+                server_message=server_message,
             ), reply_to_message_id=message_id)
 
         self.parse_and_send(parse_result)
@@ -284,7 +284,7 @@ class DzrBot(Bot):
 
             if re.search(code_pattern, text, flags=re.I):
                 for code in re.findall(code_pattern, text, flags=re.I):
-                    if code_pattern == STANDARD_CODE_PATTERN and not('d' in code and 'r' in code):
+                    if code_pattern == STANDARD_CODE_PATTERN and not ('d' in code and 'r' in code):
                         continue
                     self.process_one_code(chat_id, code, msg.get('message_id'))
 
@@ -356,6 +356,7 @@ def __main__():
     while 1:
         bot.handle_loop()
         time.sleep(bot.sleep_seconds)
+
 
 if __name__ == '__main__':
     __main__()
