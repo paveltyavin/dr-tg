@@ -284,6 +284,8 @@ class DzrBot(Bot):
 
             if re.search(code_pattern, text, flags=re.I):
                 for code in re.findall(code_pattern, text, flags=re.I):
+                    if not 2 < len(text) < 100:
+                        continue
                     if code_pattern == STANDARD_CODE_PATTERN and not ('d' in code and 'r' in code):
                         continue
                     self.process_one_code(chat_id, code, msg.get('message_id'))
