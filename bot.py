@@ -271,10 +271,10 @@ class DzrBot(Bot):
         if self.type and 2 < len(text) < 100:
             text = text.lower()
             code_pattern = self.code_pattern or STANDARD_CODE_PATTERN
+            if code_pattern == STANDARD_CODE_PATTERN:
+                text = text.replace('д', 'd').replace('р', 'r')
             if re.search(code_pattern, text, flags=re.I):
                 # конвертируем кириллицу в латинницу, если шаблон стандартный
-                if code_pattern == STANDARD_CODE_PATTERN:
-                    text = text.replace('д', 'd').replace('р', 'r')
                 for code in re.findall(code_pattern, text, flags=re.I):
                     self.process_one_code(chat_id, code, msg.get('message_id'))
 
