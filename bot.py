@@ -284,7 +284,7 @@ class DzrBot(Bot):
 
             if re.search(code_pattern, text, flags=re.I):
                 for code in re.findall(code_pattern, text, flags=re.I):
-                    if not 2 < len(text) < 100:
+                    if not 2 < len(code) < 100:
                         continue
                     if code_pattern == STANDARD_CODE_PATTERN and not ('d' in code and 'r' in code):
                         continue
