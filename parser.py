@@ -13,8 +13,8 @@ import settings
 from decorators import throttle
 
 host = 'http://classic.dzzzr.ru/'
-start_url = urljoin(host, 'moscow/')
-drive_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
+auth_url = urljoin(host, 'moscow/?section=anons&league=2')
+main_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'nostat': 'on',
     'notext': '',
     'notags': '',
@@ -69,7 +69,9 @@ class Parser(object):
         """Авторизация на сайте дозора"""
         self.table_cookies.delete()
 
-        self.g.go(start_url)
+        self.g.go(auth_url)
+        if not (self.g.doc.select(b'.//*[@name="login"]').exists() and self.g.doc.select(b'.//*[@name="password"]').exists()):
+            return False
         self.g.doc.set_input('login', login)
         self.g.doc.set_input('password', password)
         self.g.doc.submit()
@@ -90,7 +92,7 @@ class Parser(object):
         """Загружает страницу движка"""
         n = datetime.utcnow()
 
-        self.g.go(drive_url)
+        self.g.go(main_url)
         if code is not None:
             if self.g.doc.select(b'.//*[@name="cod"]').exists():
                 self.g.doc.set_input('cod', code)
