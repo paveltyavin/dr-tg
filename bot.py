@@ -244,7 +244,7 @@ class DzrBot(Bot):
             return
 
         body = self.parser.g.doc.body.decode('cp1251')
-        message += 'Движок {}\n'.format("включен" if 'лог игры' in body.lower() else 'выключен')
+        message += 'Движок {}\n'.format("включен" if 'статистика' in body.lower() else 'выключен')
         message += 'Режим парсинга движка {}\n'.format("включен" if self.parse else "выключен")
         message += 'Режим ввода кодов {}\n'.format("включен" if self.type else "выключен")
 
