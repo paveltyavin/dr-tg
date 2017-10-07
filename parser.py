@@ -162,9 +162,14 @@ class Parser(object):
         except IndexError:
             return result
         sector_list_str = div.html()
-        level_number_str = div.node().getprevious().text
-        level_number_str = re.sub('\D', '', level_number_str)
-        level = int(level_number_str)
+
+        html = self.g.doc.body.decode('cp1251')
+
+        level_number_list = list(re.findall('levelNumberBegin-->(\d+)\<', html)) + list(re.findall('Задание (\d+)', html))
+        if level_number_list:
+            level = int(next(level_number_list))
+        else:
+            level = 0
 
         bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
 
