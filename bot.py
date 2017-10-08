@@ -1,3 +1,4 @@
+import logging
 from grab.error import GrabTimeoutError
 from telepot import Bot
 import settings
@@ -293,6 +294,9 @@ class DzrBot(Bot):
                     self.process_one_code(chat_id, code, msg.get('message_id'))
 
     def on_chat_message(self, msg):
+        if int(time.time()) - msg['date'] > 300:
+            return
+        logging.debug('new message')
         if self.sentry:
             try:
                 self._on_chat_message(msg)

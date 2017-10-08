@@ -167,7 +167,7 @@ class Parser(object):
 
         level_number_list = list(re.findall('levelNumberBegin-->(\d+)\<', html)) + list(re.findall('Задание (\d+)', html))
         if level_number_list:
-            level = int(next(level_number_list))
+            level = int(level_number_list[0])
         else:
             level = 0
 
