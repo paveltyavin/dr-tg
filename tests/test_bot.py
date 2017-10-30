@@ -1,5 +1,6 @@
 import os
 import codecs
+import time
 
 from grab.error import GrabTimeoutError
 
@@ -34,6 +35,10 @@ class BotTestCase(TestCase):
         self.bot.code_pattern = None
         self.bot.sentry = None
 
+    @staticmethod
+    def _new_message_dict(text, **kwargs):
+        return dict(chat={'id': 'CHAT_ID'}, date=time.time(), text=text, **kwargs)
+
     def tearDown(self):
         """Очищаем таблицы после прохождения каждого теста"""
         self.parser.table_tip.delete()
@@ -49,30 +54,30 @@ class BotTestCase(TestCase):
             self.parser.g.setup_document(html_bytes)
 
     def test_help(self):
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/help'})
+        self.bot.on_chat_message(self._new_message_dict('/help'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', HELP_TEXT)
 
     def test_code_pattern(self):
         self.assertEqual(self.bot.code_pattern, None)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern ['})
+        self.bot.on_chat_message(self._new_message_dict('/pattern ['))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода не установлен')
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern \w+\d{2}'})
+        self.bot.on_chat_message(self._new_message_dict('/pattern \w+\d{2}'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода установлен: \w+\d{2}')
         self.bot.sendMessage.reset_mock()
         self.assertEqual(self.bot.code_pattern, "\w+\d{2}")
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern'})
+        self.bot.on_chat_message(self._new_message_dict('/pattern'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода: \w+\d{2}')
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern standart'})
+        self.bot.on_chat_message(self._new_message_dict('/pattern standart'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Установлен стандартный шаблон кода')
         self.bot.sendMessage.reset_mock()
         self.assertEqual(self.bot.code_pattern, None)
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pattern'})
+        self.bot.on_chat_message(self._new_message_dict('/pattern'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Шаблон кода: стандартный')
         self.bot.sendMessage.reset_mock()
 
@@ -80,7 +85,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
         self.bot.code_pattern = "\w+\d{2}"
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': 'Бла бла бла песок98. Блаблабла', 'message_id': 321})
+        self.bot.on_chat_message(self._new_message_dict('Бла бла бла песок98. Блаблабла', message_id=321))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'песок98 : код не принят. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_fail(self):
@@ -90,8 +95,18 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': 'dr4', 'message_id': 321})
+        self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят. Таймер: 01:27', reply_to_message_id=321)
+
+    def test_code_pass(self):
+        """
+        Вызываем пробитие кода (dr4).
+        Если код верный, то бот должен послать об этом сообщение в чат
+        """
+        self.set_html('pages/code_1.html')
+        self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
+        self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_empty(self):
         """
@@ -99,7 +114,7 @@ class BotTestCase(TestCase):
         """
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/ НЕСТАНДАРТНЫЙКОД1', 'message_id': 321})
+        self.bot.on_chat_message(self._new_message_dict('/ НЕСТАНДАРТНЫЙКОД1', message_id=321))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят. Таймер: 01:27', reply_to_message_id=321)
 
     def test_new_level(self):
@@ -179,15 +194,15 @@ class BotTestCase(TestCase):
         )
 
     def test_type(self):
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
 
         self.bot.sendMessage.reset_mock()
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type off'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type off'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Выключен')
 
         self.bot.sendMessage.reset_mock()
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type on'})
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type on'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
 
     def test_clock(self):
@@ -199,18 +214,18 @@ class BotTestCase(TestCase):
         """
         аутентификация через команду /auth
         """
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/auth login parol'})
+        self.bot.on_chat_message(self._new_message_dict('/auth login parol'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Аутентификация установлена. Логин = login")
         self.assertEqual(self.bot.parser.auth.called, True)
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/auth login'})
+        self.bot.on_chat_message(self._new_message_dict('/auth login'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Ошибка в параметрах аутентификации")
         self.bot.sendMessage.reset_mock()
 
     def test_test_error(self):
         with self.assertRaises(Exception):
-            self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/test_error'})
+            self.bot.on_chat_message(self._new_message_dict('/test_error'))
 
     def test_pin(self):
         """
@@ -218,16 +233,16 @@ class BotTestCase(TestCase):
         """
         self.bot.set_data('pin', '')
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin'})
+        self.bot.on_chat_message(self._new_message_dict('/pin'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин отсутствует")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin moscow_cap:123456'})
+        self.bot.on_chat_message(self._new_message_dict('/pin moscow_cap:123456'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин установлен")
         self.bot.sendMessage.reset_mock()
         self.assertEqual(self.bot.get_data().get('pin'), "moscow_cap:123456")
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/pin'})
+        self.bot.on_chat_message(self._new_message_dict('/pin'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Пин есть: moscow_cap:123456")
         self.bot.sendMessage.reset_mock()
 
@@ -237,22 +252,22 @@ class BotTestCase(TestCase):
         """
 
         self.bot.set_data('parse', False)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/parse on'})
+        self.bot.on_chat_message(self._new_message_dict('/parse on'))
         self.assertEqual(self.bot.get_data().get('parse'), True)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/parse off'})
+        self.bot.on_chat_message(self._new_message_dict('/parse off'))
         self.assertEqual(self.bot.get_data().get('parse'), False)
 
         self.bot.set_data('type', False)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type on'})
+        self.bot.on_chat_message(self._new_message_dict('/type on'))
         self.assertEqual(self.bot.get_data().get('type'), True)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/type off'})
+        self.bot.on_chat_message(self._new_message_dict('/type off'))
         self.assertEqual(self.bot.get_data().get('type'), False)
 
     def test_cookie(self):
         """
         аутентификация через команду /cookie
         """
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/cookie KTerByfGopF5dSgFjkl07x8v'})
+        self.bot.on_chat_message(self._new_message_dict('/cookie KTerByfGopF5dSgFjkl07x8v'))
         self.assertEqual(self.bot.get_data().get('cookie'), "KTERBYFGOPF5DSGFJKL07X8V")
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Кука установлена")
 
@@ -260,73 +275,74 @@ class BotTestCase(TestCase):
         """
         хранение ссылки /link
         """
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link link1'})
+        self.bot.on_chat_message(self._new_message_dict('/link link1'))
         self.assertEqual(self.bot.get_data().get('link'), "link1")
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена ссылка link1")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link link2'})
+        self.bot.on_chat_message(self._new_message_dict('/link link2'))
         self.assertEqual(self.bot.get_data().get('link'), "link2")
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена ссылка link2")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/link'})
+        self.bot.on_chat_message(self._new_message_dict('/link'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Ссылка: link2")
         self.bot.sendMessage.reset_mock()
 
     def test_sleep_seconds(self):
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 10'})
+        self.bot.on_chat_message(self._new_message_dict('/sleep_seconds 10'))
         self.assertEqual(self.bot.get_data().get('sleep_seconds'), 10)
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 10")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds'})
+        self.bot.on_chat_message(self._new_message_dict('/sleep_seconds'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "sleep_seconds = 10")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 20'})
+        self.bot.on_chat_message(self._new_message_dict('/sleep_seconds 20'))
         self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Установлена sleep_seconds = 20")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds к'})
+        self.bot.on_chat_message(self._new_message_dict('/sleep_seconds к'))
+        self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Ошибка в установке")
         self.bot.sendMessage.reset_mock()
 
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/sleep_seconds 5'})
+        self.bot.on_chat_message(self._new_message_dict('/sleep_seconds 5'))
         self.assertEqual(self.bot.get_data().get('sleep_seconds'), 20)
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Время sleep_seconds должно быть в итервале от 10 до 300 секунд. Если вы хотите выключить парсинг движка, воспользуйтесь командой /parse off")
         self.bot.sendMessage.reset_mock()
 
     def test_status(self):
         self.set_html('pages/code_1.html')
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/status'})
+        self.bot.on_chat_message(self._new_message_dict('/status'))
         self.assertTrue(self.bot.parser.fetch.called)
 
     def test_connection_error(self):
         self.set_html('pages/code_1.html')
         self.bot.parser.fetch = Mock(side_effect=GrabTimeoutError)
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/status'})
+        self.bot.on_chat_message(self._new_message_dict('/status'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Проблема подключения к движку")
 
     def test_get_chat_id(self):
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/get_chat_id'})
+        self.bot.on_chat_message(self._new_message_dict('/get_chat_id'))
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'chat id: CHAT_ID')
 
     def test_cord(self):
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '55.370 37.550'})
+        self.bot.on_chat_message(self._new_message_dict('55.370 37.550'))
         self.bot.sendLocation.assert_any_call('CHAT_ID', '55.370', '37.550')
 
     def test_ko(self):
         self.set_html('pages/code_1.html')
         self.parser.parse()
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/ko'})
+        self.bot.on_chat_message(self._new_message_dict('/ko'))
         self.assertTrue(True)
 
     def test_img(self):
         self.set_html('pages/code_1.html')
         self.parser.parse()
-        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'text': '/img'})
+        self.bot.on_chat_message(self._new_message_dict('/img'))
         self.assertEqual(self.bot.sendPhoto.called, True)
 
 

@@ -227,7 +227,7 @@ class DzrBot(Bot):
 
         server_message = parse_result.get('message', '').lower()
         if server_message:
-            self.sendMessage(chat_id, "{emoji}{new_level}{code} {server_message}{clock}".format(
+            self.sendMessage(chat_id, "{emoji}{new_level}{code} : {server_message}.{clock}".format(
                 emoji='✅ ' if 'код принят' in server_message else '',
                 new_level='💥 ' if 'выполняйте следующее задание' in server_message else '',
                 clock=" Таймер: {}".format(clock) if clock else '',
