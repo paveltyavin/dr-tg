@@ -173,7 +173,7 @@ class Parser(object):
 
         bot_data = self.table_bot.find_one(**{'token': settings.TOKEN})
 
-        if bot_data.get('level') != level:
+        if bot_data.get('level') is None or int(bot_data.get('level')) != level:
             self.table_bot.upsert({
                 'token': settings.TOKEN,
                 'level': level,

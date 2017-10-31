@@ -14,6 +14,7 @@ class ParserTestCase(unittest.TestCase):
 
     def tearDown(self):
         """Очищаем таблицы после прохождения каждого теста"""
+        self.parser.table_bot.delete()
         self.parser.table_tip.delete()
         self.parser.table_code.delete()
         self.parser.table_sector.delete()

@@ -141,6 +141,15 @@ class BotTestCase(TestCase):
         self.bot.handle_loop()
         self.bot.sendMessage.assert_any_call('CHANNEL_ID', 'Открыт спойлер')
 
+    def test_nothing_new(self):
+        """Если ничего не произошло, то ничего и не шлём"""
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.bot.sendMessage.reset_mock()
+        self.set_html('pages/code_1.html')
+        self.bot.handle_loop()
+        self.assertFalse(self.bot.sendMessage.called)
+
     def test_new_code(self):
         """
         Если в движке появился новый пробитый код,
