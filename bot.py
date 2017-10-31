@@ -226,13 +226,25 @@ class DzrBot(Bot):
         clock = parse_result.get('clock')
 
         server_message = parse_result.get('message', '').lower()
+        code_ok = 'код принят' in server_message
+
+        metki_message = ""
+        if code_ok and parse_result.get('new_metki'):
+            messages = ["Сектор {sector_id}, метка {metka}".format(**metka)
+                        for metka in parse_result['new_metki']]
+            if len(messages) == 1:
+                metki_message = " " + messages[0] + "."
+            elif len(messages) <= 3:
+                metki_message = " " + " или ".join(messages) + "."
+
         if server_message:
-            self.sendMessage(chat_id, "{emoji}{new_level}{code} : {server_message}.{clock}".format(
-                emoji='✅ ' if 'код принят' in server_message else '',
+            self.sendMessage(chat_id, "{emoji}{new_level}{code} : {server_message}.{metki_message}{clock}".format(
+                emoji='✅ ' if code_ok else '',
                 new_level='💥 ' if 'выполняйте следующее задание' in server_message else '',
                 clock=" Таймер: {}".format(clock) if clock else '',
                 code=code,
                 server_message=server_message,
+                metki_message=metki_message,
             ), reply_to_message_id=message_id)
 
         self.parse_and_send(parse_result)
