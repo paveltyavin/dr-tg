@@ -104,6 +104,30 @@ class BotTestCase(TestCase):
         Если код верный, то бот должен послать об этом сообщение в чат
         """
         self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_2.html')
+        self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
+        self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор 1, метка 8. Таймер: 01:27', reply_to_message_id=321)
+
+    def test_code_pass_unsure(self):
+        """
+        Вызываем пробитие кода (dr4), но возможны две метки.
+        """
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_3.html')
+        self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
+        self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор 1, метка 8 или Сектор 1, метка 11. Таймер: 01:27', reply_to_message_id=321)
+
+    def test_code_pass_unsure2(self):
+        """
+        Вызываем пробитие кода (dr4), но не ясно, по какой метке.
+        """
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
         self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
         self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Таймер: 01:27', reply_to_message_id=321)

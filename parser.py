@@ -155,6 +155,7 @@ class Parser(object):
         result = {
             'new_level': False,  # Новый уровень?
             'new_code': False,  # Новый пробитый код?
+            'new_metki': [],  # Номер (или возможные номера) пробитых кодов, если есть
             'sector_list': [],  # Инфо о взятых кодах
         }
         try:
@@ -221,6 +222,7 @@ class Parser(object):
                     if 'бонусные коды' not in sector['name']:
                         result['new_code'] = True
                     sector['code_list'].append(filters)
+                    result['new_metki'].append(filters)
 
             result['sector_list'].append(sector)
             self.table_sector.upsert({

@@ -54,6 +54,35 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(code_2['ko'], '2')
         self.assertEqual(code_2['taken'], False)
 
+    def test_new_metki(self):
+        self.set_html('pages/code_1.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 0)
+        self.set_html('pages/code_2.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 1)
+        new_codes = [(m['sector_id'], m['metka']) for m in result['new_metki']]
+        self.assertIn((1, 8), new_codes)
+
+    def test_new_metki_multiple(self):
+        self.set_html('pages/code_1.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 0)
+        self.set_html('pages/code_3.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 2)
+        new_codes = [(m['sector_id'], m['metka']) for m in result['new_metki']]
+        self.assertIn((1, 8), new_codes)
+        self.assertIn((1, 11), new_codes)
+
+    def test_new_metki_no(self):
+        self.set_html('pages/code_1.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 0)
+        self.set_html('pages/code_1.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 0)
+
     def test_parse_tip(self):
         self.set_html('pages/tip_1.html')
         result = self.parser.parse()
