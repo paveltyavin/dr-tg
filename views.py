@@ -125,7 +125,7 @@ def sector_text(sector):
                 except IndexError:
                     continue
                 result += "{} {}  {}    ".format(
-                    str(code_index + 1).rjust(2),
+                    str(code['metka']).rjust(2),
                     code['ko'].strip().ljust(2),
                     'V' if code['taken'] else ' ',
                 )

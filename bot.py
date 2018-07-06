@@ -19,6 +19,7 @@ HELP_TEXT = '''
 /type - ввод кодов.
 
 /pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard".
+/show_ko - настройка вывода КО в канал. Формат: /show_ko ([-](основные|бонусные|взятые))*. Пример: "/show_ko бонусные -основные -взятые" - выводить только невзятые бонусные КО. 
 /link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
 /ko - прислать актуальную табличку с КО в чат.
 /img - прислать актуальную изображение с КО в чат.
@@ -39,6 +40,9 @@ class DzrBot(Bot):
     type = False  # Режим ввода кодов
     sentry = None
     code_pattern = None
+    show_ko_bonus = False
+    show_ko_main = True
+    show_ko_taken = True  # Если True -- показывать все, если False -- скрыть взятые.
     sleep_seconds = 30
 
     routes = (
@@ -57,6 +61,7 @@ class DzrBot(Bot):
         (r'^/status', 'on_status'),
         (r'^/test_error', 'on_test_error'),
         (r'^/type', 'on_type'),
+        (r'^/show_ko', 'on_show_ko'),
     )
 
     def set_data(self, key, value):
@@ -111,6 +116,27 @@ class DzrBot(Bot):
         elif 'off' in text:
             self.set_data('parse', False)
         self.sendMessage(chat_id, "Режим парсинга движка: {}".format("Включен" if self.parse else "Выключен"))
+
+    def on_show_ko(self, chat_id, text, msg):
+        text = text.lower()
+        keywords = {
+            'main': 'show_ko_main', 'основ': 'show_ko_main',
+            'bonus': 'show_ko_bonus', 'бонус': 'show_ko_bonus',
+            'taken': 'show_ko_taken', 'взят': 'show_ko_taken'
+        }
+        for word, param in keywords.items():
+            if '-' + word in text or '- ' + word in text:
+                self.set_data(param, False)
+            elif word in text:
+                self.set_data(param, True)
+        if 'default' in text:
+            self.set_data('show_ko_main', True)
+            self.set_data('show_ko_bonus', False)
+            self.set_data('show_ko_taken', True)
+
+        _f = lambda x: "[V]" if x else "[ ]"
+        self.sendMessage(chat_id, "Вывод КО в канал: Основные коды: {}, бонусные коды: {}. Показывать взятые: {}.".format(
+            _f(self.show_ko_main), _f(self.show_ko_bonus), _f(self.show_ko_taken)))
 
     def on_cookie(self, chat_id, text, msg):
         for cookie in re.findall('(\w{24})', text):
@@ -319,7 +345,12 @@ class DzrBot(Bot):
 
     def send_ko(self, channel_id):
         for sector in self.parser.table_sector.all():
-            sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
+            filters = dict(
+                sector_id=sector['id']
+            )
+            if not self.show_ko_taken:
+                filters['taken'] = False
+            sector['code_list'] = list(self.parser.table_code.find(**filters))
             self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
 
     def send_ko_img(self, channel_id):
@@ -357,7 +388,16 @@ class DzrBot(Bot):
             self.sendMessage(channel_id, "Подсказка: {}".format(tip['text']))
 
         if parse_result['new_code']:
-            self.send_ko(channel_id)
+            have_new_interesting_codes = False
+            for sector in parse_result['sector_list']:
+                is_bonus = 'бонусные коды' in sector['name']
+                if is_bonus and self.show_ko_bonus:
+                    have_new_interesting_codes = True
+                if not is_bonus and self.show_ko_main:
+                    have_new_interesting_codes = True
+
+            if have_new_interesting_codes:
+                self.send_ko(channel_id)
 
         if parse_result['new_spoiler']:
             self.sendMessage(channel_id, 'Открыт спойлер')

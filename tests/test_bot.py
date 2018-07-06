@@ -226,6 +226,41 @@ class BotTestCase(TestCase):
             parse_mode='Markdown',
         )
 
+    def test_new_code_disabled(self):
+        """
+        Отключаем сообщения об основных кодах. Бот не должен реагировать на их появление.
+        """
+        self.bot.show_ko_main = False
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_2.html')
+        self.bot.handle_loop()
+        self.assertFalse(self.bot.sendMessage.called)
+
+    def test_new_code_not_taken(self):
+        """
+        Отключаем сообщения об основных кодах. Бот не должен реагировать на их появление.
+        """
+        self.bot.show_ko_taken = False
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_1.html')
+        self.parser.parse()
+        self.set_html('pages/code_2.html')
+        self.bot.handle_loop()
+        self.bot.sendMessage.assert_any_call(
+            'CHANNEL_ID',
+            ' основные коды\n'
+            '```\n'
+            '10 1+       \n'
+            '11 1+       \n'
+            '\n\n\n'
+            '```',
+            parse_mode='Markdown',
+        )
+
     def test_type(self):
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
@@ -237,6 +272,21 @@ class BotTestCase(TestCase):
         self.bot.sendMessage.reset_mock()
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type on'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
+
+    def test_show_ko(self):
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/show_ko'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Вывод КО в канал: Основные коды: [V], бонусные коды: [ ]. Показывать взятые: [V].')
+
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/show_ko -основные'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Вывод КО в канал: Основные коды: [ ], бонусные коды: [ ]. Показывать взятые: [V].')
+
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/show_ko бонусные -взятые'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Вывод КО в канал: Основные коды: [ ], бонусные коды: [V]. Показывать взятые: [ ].')
+
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/show_ko default'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'Вывод КО в канал: Основные коды: [V], бонусные коды: [ ]. Показывать взятые: [V].')
 
     def test_clock(self):
         self.set_html('pages/code_1.html')
