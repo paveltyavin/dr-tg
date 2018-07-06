@@ -219,7 +219,7 @@ class Parser(object):
                     self.table_code.insert(filters)
                 elif old_code['taken'] != taken:
                     self.table_code.update(filters, ['sector_id', 'metka'])
-                    if 'бонусные коды' not in sector['name']:
+                    if not(bot_data.get('dont_notify_bonus') and 'бонусные коды' in sector['name']):
                         result['new_code'] = True
                     sector['code_list'].append(filters)
                     result['new_metki'].append(filters)

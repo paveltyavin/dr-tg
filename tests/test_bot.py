@@ -238,6 +238,18 @@ class BotTestCase(TestCase):
         self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/type on'})
         self.bot.sendMessage.assert_any_call('CHAT_ID', 'Режим ввода кодов: Включен')
 
+    def test_set(self):
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/set dont_notify_bonus on'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'set dont_notify_bonus on')
+        self.assertEqual(self.bot.dont_notify_bonus, True)
+
+        self.bot.sendMessage.reset_mock()
+        self.bot.on_chat_message({'chat': {'id': 'CHAT_ID'}, 'date': time.time(), 'text': '/set dont_notify_bonus off'})
+        self.bot.sendMessage.assert_any_call('CHAT_ID', 'set dont_notify_bonus off')
+        self.assertEqual(self.bot.dont_notify_bonus, False)
+
+
     def test_clock(self):
         self.set_html('pages/code_1.html')
         result = self.parser.parse()

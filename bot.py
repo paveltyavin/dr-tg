@@ -17,6 +17,7 @@ HELP_TEXT = '''
 Настройки /parse, /type можно включать так: "/parse on" и выключать так: "/parse off".
 /parse - парсинг движка дозора.
 /type - ввод кодов.
+/set dont_notify_bonus on - не отправлять в канал сообщения о взятых бонусных кодах.
 
 /pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard".
 /link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
@@ -57,6 +58,13 @@ class DzrBot(Bot):
         (r'^/status', 'on_status'),
         (r'^/test_error', 'on_test_error'),
         (r'^/type', 'on_type'),
+        (r'^/set', 'on_set'),
+    )
+
+    bool_options = (
+        'dont_notify_bonus',
+        'type',
+        'parse',
     )
 
     def set_data(self, key, value):
@@ -95,6 +103,16 @@ class DzrBot(Bot):
     def on_help(self, chat_id, text, msg):
         self.sendMessage(chat_id, HELP_TEXT)
 
+    def on_set(self, chat_id, text, msg):
+        try:
+            text = text[5:]
+            key, value = text.split(' ', 2)
+            if key in self.bool_options:
+                self.set_data(key, value == 'on')
+                self.sendMessage(chat_id, "set {} {}".format(key, value))
+        except ValueError:
+            pass
+
     def on_type(self, chat_id, text, msg):
         if 'on' in text:
             self.set_data('type', True)
@@ -113,7 +131,7 @@ class DzrBot(Bot):
         self.sendMessage(chat_id, "Режим парсинга движка: {}".format("Включен" if self.parse else "Выключен"))
 
     def on_cookie(self, chat_id, text, msg):
-        for cookie in re.findall('(\w{24})', text):
+        for cookie in re.findall('(\w{32})', text):
             cookie = cookie.upper()
             self.parser.set_cookie(cookie)
             self.set_data('cookie', cookie)
