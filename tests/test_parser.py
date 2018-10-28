@@ -54,6 +54,26 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(code_2['ko'], '2')
         self.assertEqual(code_2['taken'], False)
 
+    def test_parse_level_one_ko_with_code(self):
+        """Один сектор, многие коды взяты, у взятых кодов месте с КО написан сам код"""
+        self.set_html('pages/ko_code.html')
+        self.parser.parse()
+
+        self.assertEqual(self.parser.table_sector.count(), 2)
+        self.assertEqual(self.parser.table_code.count(), 11)
+
+        code_b = self.parser.table_code.find_one(metka=1, sector_id=1)
+        self.assertEqual(code_b['ko'], 'N')
+        self.assertEqual(code_b['taken'], True)
+
+        code_1 = self.parser.table_code.find_one(metka=1, sector_id=2)
+        self.assertEqual(code_1['ko'], '2')
+        self.assertEqual(code_1['taken'], False)
+
+        code_2 = self.parser.table_code.find_one(metka=2)
+        self.assertEqual(code_2['ko'], '1+')
+        self.assertEqual(code_2['taken'], True)
+
     def test_new_metki(self):
         self.set_html('pages/code_1.html')
         result = self.parser.parse()
