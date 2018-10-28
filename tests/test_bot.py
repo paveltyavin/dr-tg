@@ -312,8 +312,8 @@ class BotTestCase(TestCase):
         """
         аутентификация через команду /cookie
         """
-        self.bot.on_chat_message(self._new_message_dict('/cookie KTerByfGopF5dSgFjkl07x8v'))
-        self.assertEqual(self.bot.get_data().get('cookie'), "KTERBYFGOPF5DSGFJKL07X8V")
+        self.bot.on_chat_message(self._new_message_dict('/cookie lkqhBbFLrclYHLqbs4hsaHFIAGBRJYMV'))
+        self.assertEqual(self.bot.get_data().get('cookie'), "LKQHBBFLRCLYHLQBS4HSAHFIAGBRJYMV")
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Кука установлена")
 
     def test_link(self):
