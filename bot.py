@@ -246,7 +246,7 @@ class DzrBot(Bot):
         server_message = parse_result.get('message', '').lower()
 
         code_ok = 'код принят' in server_message
-        code_old = 'вы уже ввели этот код' in server_message
+        code_old = ('вы уже ввели этот код' in server_message) or ('повторно отправить уже принятый' in server_message)
         code_bad = ('код не принят' in server_message) and not code_old
         new_level = 'выполняйте следующее задание' in server_message
         emoji = ''
