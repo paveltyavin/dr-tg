@@ -130,3 +130,12 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/spoiler_2.html')
         result = self.parser.parse()
         self.assertEqual(result['new_spoiler'], True)
+
+    def test_parse_message(self):
+        self.set_html('pages/spoiler_1.html')
+        result = self.parser.parse()
+        self.assertEqual(result['message'], '')
+
+        self.set_html('pages/msg.html')
+        result = self.parser.parse()
+        self.assertEqual(result['message'], 'Код принят. Выполняйте следующее задание.')

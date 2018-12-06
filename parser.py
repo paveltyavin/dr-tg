@@ -127,7 +127,7 @@ class Parser(object):
                 'message': ''
             }
         message = self.g.doc.select('//div[@class="sysmsg"]//b').html()
-        message = message.replace('<b>', '').replace('</b>', '')
+        message = message.replace('<b>', '').replace('</b>', '').strip()
         return {
             'message': message
         }
