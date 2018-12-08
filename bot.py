@@ -18,6 +18,7 @@ HELP_TEXT = '''
 /parse - парсинг движка дозора.
 /type - ввод кодов.
 /set dont_notify_bonus on - не отправлять в канал сообщения о взятых бонусных кодах.
+/set maps off - не отправлять карту в ответ на корды.
 
 /pattern - регулярное выражение для поиска кода. Чтобы установить стандартное выражение используйте команду "/pattern standard".
 /link - ссылка в движочек. Для настройки используйте команду "/link <ссылка>", для вывода актуальной ссылки - просто "/link".
@@ -38,6 +39,7 @@ HELP_TEXT += ADMIN_HELP_TEXT
 class DzrBot(Bot):
     parse = False  # Режим парсинга движка
     type = False  # Режим ввода кодов
+    maps = True
     sentry = None
     code_pattern = None
     sleep_seconds = 30
@@ -65,6 +67,7 @@ class DzrBot(Bot):
         'dont_notify_bonus',
         'type',
         'parse',
+        'maps',
     )
 
     def set_data(self, key, value):
@@ -87,6 +90,7 @@ class DzrBot(Bot):
             'parse',
             'sleep_seconds',
             'code_pattern',
+            'maps'
         ]:
             value = data.get(key)
             if value is not None:
@@ -230,9 +234,10 @@ class DzrBot(Bot):
             self.sendMessage(chat_id, "sleep_seconds = {}".format(data.get('sleep_seconds')))
 
     def on_cord(self, chat_id, text, msg):
-        cord_list = re.findall(CORD_RE, text)
-        if len(cord_list) == 2:
-            self.sendLocation(chat_id, *cord_list)
+        if self.maps:
+            cord_list = re.findall(CORD_RE, text)
+            if len(cord_list) == 2:
+                self.sendLocation(chat_id, *cord_list)
 
     def process_one_code(self, chat_id, code, message_id):
         try:

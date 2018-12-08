@@ -378,6 +378,11 @@ class BotTestCase(TestCase):
         self.bot.on_chat_message(self._new_message_dict('55.370 37.550'))
         self.bot.sendLocation.assert_any_call('CHAT_ID', '55.370', '37.550')
 
+    def test_cord_off(self):
+        self.bot.on_chat_message(self._new_message_dict('/set maps off'))
+        self.bot.on_chat_message(self._new_message_dict('55.370 37.550'))
+        self.bot.sendLocation.assert_not_called()
+
     def test_ko(self):
         self.set_html('pages/code_1.html')
         self.parser.parse()
