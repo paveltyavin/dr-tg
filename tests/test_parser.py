@@ -34,7 +34,7 @@ class ParserTestCase(unittest.TestCase):
         self.assertEqual(self.parser.table_sector.count(), 2)
 
         sector_1 = self.parser.table_sector.find_one()
-        self.assertEqual(sector_1['name'], ' бонусные коды')
+        self.assertEqual(sector_1['name'], 'бонусные коды')
         code = self.parser.table_code.find_one(metka=1, sector_id=sector_1['id'])
         self.assertEqual(code['ko'], 'N')
 
@@ -81,8 +81,8 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/code_2.html')
         result = self.parser.parse()
         self.assertEqual(len(result['new_metki']), 1)
-        new_codes = [(m['sector_id'], m['metka']) for m in result['new_metki']]
-        self.assertIn((1, 8), new_codes)
+        new_codes = [(m['sector_name'], m['metka']) for m in result['new_metki']]
+        self.assertIn(('основные коды', 8), new_codes)
 
     def test_new_metki_multiple(self):
         self.set_html('pages/code_1.html')
@@ -91,9 +91,9 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/code_3.html')
         result = self.parser.parse()
         self.assertEqual(len(result['new_metki']), 2)
-        new_codes = [(m['sector_id'], m['metka']) for m in result['new_metki']]
-        self.assertIn((1, 8), new_codes)
-        self.assertIn((1, 11), new_codes)
+        new_codes = [(m['sector_name'], m['metka']) for m in result['new_metki']]
+        self.assertIn(('основные коды', 8), new_codes)
+        self.assertIn(('основные коды', 11), new_codes)
 
     def test_new_metki_no(self):
         self.set_html('pages/code_1.html')
@@ -102,6 +102,16 @@ class ParserTestCase(unittest.TestCase):
         self.set_html('pages/code_1.html')
         result = self.parser.parse()
         self.assertEqual(len(result['new_metki']), 0)
+
+    def test_new_metki_two_sectors(self):
+        self.set_html('pages/sectors_1.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 0)
+        self.set_html('pages/sectors_2.html')
+        result = self.parser.parse()
+        self.assertEqual(len(result['new_metki']), 1)
+        new_codes = [(m['sector_name'], m['metka']) for m in result['new_metki']]
+        self.assertIn(('забор: основные коды', 3), new_codes)
 
     def test_parse_tip(self):
         self.set_html('pages/tip_1.html')

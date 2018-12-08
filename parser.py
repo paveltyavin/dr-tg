@@ -189,16 +189,20 @@ class Parser(object):
             sector_list_str = sector_list_str.split('<strong>Коды сложности</strong><br>')[1]
         except IndexError:
             return result
-        sector_list_str = sector_list_str.split('<br></div>')[0]
+        sector_list_str = sector_list_str.split('</div>')[0]
         sector_list_str = sector_list_str.replace('null', 'N')
         for sector_index, sector_str in enumerate(sector_list_str.split('<br>')):
-            try:
-                sector_name, sector_code_str = sector_str.split(': ')
-            except ValueError:
+            sector_str = sector_str.strip()
+            # Сектор основные коды: 1+, 2+, 2+
+            #  основные коды: 1+, 2+, 2+
+            sector_parts = sector_str.split(': ')
+            if len(sector_parts) < 2:
                 continue
+            sector_name = ': '.join(i.strip() for i in sector_parts[:-1]).replace('Сектор ', '')
+            sector_code_str = sector_parts[-1]
             sector = {
                 'id': sector_index + 1,
-                'name': sector_name,
+                'name': sector_name.strip(),
                 'code_list': [],
             }
             for metka_index, item in enumerate(sector_code_str.split(', ')):
@@ -222,7 +226,7 @@ class Parser(object):
                     if not(bot_data.get('dont_notify_bonus') and 'бонусные коды' in sector['name']):
                         result['new_code'] = True
                     sector['code_list'].append(filters)
-                    result['new_metki'].append(filters)
+                    result['new_metki'].append(dict(sector_name=sector['name'], metka=filters['metka']))
 
             result['sector_list'].append(sector)
             self.table_sector.upsert({

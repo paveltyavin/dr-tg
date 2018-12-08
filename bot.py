@@ -261,12 +261,17 @@ class DzrBot(Bot):
 
         metki_message = ""
         if code_ok and parse_result.get('new_metki'):
-            messages = ["Сектор {sector_id}, метка {metka}".format(**metka)
-                        for metka in parse_result['new_metki']]
-            if len(messages) == 1:
-                metki_message = " " + messages[0] + "."
-            elif len(messages) <= 3:
-                metki_message = " " + " или ".join(messages) + "."
+            metki = parse_result['new_metki']
+            if len(metki) == 1:
+                metki_message = "Сектор {sector_name}, метка {metka}".format(**metki[0])
+            elif len(metki) <= 2:
+                if metki[0]['sector_name'] == metki[1]['sector_name']:
+                    metki_message = "Сектор {sector_name}, метка {metka1} или {metka2}".format(
+                        sector_name=metki[0]['sector_name'], metka1=metki[0]['metka'], metka2=metki[1]['metka'])
+                else:
+                    metki_message = " или ".join("Сектор {sector_name}, метка {metka}".format(**metka) for metka in metki)
+            if metki_message != "":
+                metki_message = " {}.".format(metki_message)
 
         if server_message:
             self.sendMessage(chat_id, "{emoji}{code} : {server_message}.{metki_message}{clock}".format(

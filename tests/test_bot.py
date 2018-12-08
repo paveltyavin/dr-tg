@@ -108,7 +108,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_2.html')
         self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
         self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
-        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор 1, метка 8. Таймер: 01:27', reply_to_message_id=321)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор основные коды, метка 8. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_pass_unsure(self):
         """
@@ -119,7 +119,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_3.html')
         self.parser._parse_message = Mock(return_value={'message': 'код принят. ищите следующий составной код'})
         self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
-        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор 1, метка 8 или Сектор 1, метка 11. Таймер: 01:27', reply_to_message_id=321)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '✅ dr4 : код принят. ищите следующий составной код. Сектор основные коды, метка 8 или 11. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_pass_unsure2(self):
         """
@@ -188,7 +188,7 @@ class BotTestCase(TestCase):
         self.bot.handle_loop()
         self.bot.sendMessage.assert_any_call(
             'CHANNEL_ID',
-            ' основные коды\n'
+            'основные коды\n'
             '```\n'
             ' 1 3   V    11 1+       \n'
             ' 2 2   V    12 1   V    \n'
@@ -210,7 +210,7 @@ class BotTestCase(TestCase):
 
         self.bot.sendMessage.assert_any_call(
             'CHANNEL_ID',
-            ' основные коды\n'
+            'основные коды\n'
             '```\n'
             ' 1 3   V    11 1+  V    \n'
             ' 2 2   V    12 1   V    \n'
