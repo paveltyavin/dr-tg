@@ -244,7 +244,20 @@ class DzrBot(Bot):
         clock = parse_result.get('clock')
 
         server_message = parse_result.get('message', '').lower()
-        code_ok = 'код принят' in server_message
+
+        code_ok = ('код принят' in server_message) or ('принят бонусный код' in server_message)
+        code_old = ('вы уже ввели этот код' in server_message) or ('повторно отправить уже принятый' in server_message)
+        code_bad = ('код не принят' in server_message) and not code_old
+        new_level = 'выполняйте следующее задание' in server_message
+        emoji = ''
+        if code_ok:
+            emoji = '✅ '
+        elif code_old:
+            emoji = '🔄 '
+        elif code_bad:
+            emoji = '❌ '
+        if new_level:
+            emoji += '💥 '
 
         metki_message = ""
         if code_ok and parse_result.get('new_metki'):
@@ -256,9 +269,8 @@ class DzrBot(Bot):
                 metki_message = " " + " или ".join(messages) + "."
 
         if server_message:
-            self.sendMessage(chat_id, "{emoji}{new_level}{code} : {server_message}.{metki_message}{clock}".format(
-                emoji='✅ ' if code_ok else '',
-                new_level='💥 ' if 'выполняйте следующее задание' in server_message else '',
+            self.sendMessage(chat_id, "{emoji}{code} : {server_message}.{metki_message}{clock}".format(
+                emoji=emoji,
                 clock=" Таймер: {}".format(clock) if clock else '',
                 code=code,
                 server_message=server_message,

@@ -86,7 +86,7 @@ class BotTestCase(TestCase):
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
         self.bot.code_pattern = "\w+\d{2}"
         self.bot.on_chat_message(self._new_message_dict('Бла бла бла песок98. Блаблабла', message_id=321))
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'песок98 : код не принят. Таймер: 01:27', reply_to_message_id=321)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '❌ песок98 : код не принят. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_fail(self):
         """
@@ -96,7 +96,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
         self.bot.on_chat_message(self._new_message_dict('dr4', message_id=321))
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'dr4 : код не принят. Таймер: 01:27', reply_to_message_id=321)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '❌ dr4 : код не принят. Таймер: 01:27', reply_to_message_id=321)
 
     def test_code_pass(self):
         """
@@ -139,7 +139,7 @@ class BotTestCase(TestCase):
         self.set_html('pages/code_1.html')
         self.parser._parse_message = Mock(return_value={'message': 'код не принят'})
         self.bot.on_chat_message(self._new_message_dict('/ НЕСТАНДАРТНЫЙКОД1', message_id=321))
-        self.bot.sendMessage.assert_any_call('CHAT_ID', 'нестандартныйкод1 : код не принят. Таймер: 01:27', reply_to_message_id=321)
+        self.bot.sendMessage.assert_any_call('CHAT_ID', '❌ нестандартныйкод1 : код не принят. Таймер: 01:27', reply_to_message_id=321)
 
     def test_new_level(self):
         """Если наступает новый уровень, то бот должен послать об этом сообщение в канал"""
@@ -312,8 +312,8 @@ class BotTestCase(TestCase):
         """
         аутентификация через команду /cookie
         """
-        self.bot.on_chat_message(self._new_message_dict('/cookie KTerByfGopF5dSgFjkl07x8v'))
-        self.assertEqual(self.bot.get_data().get('cookie'), "KTERBYFGOPF5DSGFJKL07X8V")
+        self.bot.on_chat_message(self._new_message_dict('/cookie lkqhBbFLrclYHLqbs4hsaHFIAGBRJYMV'))
+        self.assertEqual(self.bot.get_data().get('cookie'), "LKQHBBFLRCLYHLQBS4HSAHFIAGBRJYMV")
         self.bot.sendMessage.assert_any_call('CHAT_ID', "Кука установлена")
 
     def test_link(self):

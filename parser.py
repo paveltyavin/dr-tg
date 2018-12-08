@@ -26,7 +26,7 @@ main_url = urljoin(host, 'moscow/go/?{}'.format(urlencode({
     'mes': '',
 })))
 
-red_span_re = re.compile('<span style="color:red">([123]\+?|N)</span>')
+red_span_re = re.compile('<span style="color:red">([123]\+?|N)(:[^<]+)?</span>')
 
 
 class Parser(object):
@@ -127,7 +127,7 @@ class Parser(object):
                 'message': ''
             }
         message = self.g.doc.select('//div[@class="sysmsg"]//b').html()
-        message = message.replace('<b>', '').replace('</b>', '')
+        message = message.replace('<b>', '').replace('</b>', '').strip()
         return {
             'message': message
         }
@@ -203,7 +203,7 @@ class Parser(object):
             }
             for metka_index, item in enumerate(sector_code_str.split(', ')):
                 taken = bool(red_span_re.match(item))
-                ko = red_span_re.findall(item)[0] if taken else item
+                ko = red_span_re.findall(item)[0][0] if taken else item
 
                 old_code = self.table_code.find_one(**{
                     'sector_id': sector_index + 1,
