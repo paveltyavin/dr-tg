@@ -359,7 +359,9 @@ class DzrBot(Bot):
 
     def send_ko(self, channel_id):
         for sector in self.parser.table_sector.all():
-            sector['code_list'] = list(self.parser.table_code.find(sector_id=sector['id']))
+            code_list = list(self.parser.table_code.find(sector_id=sector['id']))
+            code_list.sort(key=lambda k: k['metka'])
+            sector['code_list'] = code_list
             self.sendMessage(channel_id, sector_text(sector), parse_mode='Markdown')
 
     def send_ko_img(self, channel_id):
